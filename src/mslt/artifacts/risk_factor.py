@@ -61,7 +61,7 @@ def sample_tobacco_rate_from(year_start, year_end, data, rate_name, prev_data,
     apc_index_cols = ['age', 'sex']
 
     tables = []
-    years = range(year_start, year_end + 1)
+    years = range(int(year_start), int(year_end + 1))
 
     if apc_data is not None and value_col in apc_data.columns:
         data_columns = [c for c in df.columns if c not in df_index_cols]

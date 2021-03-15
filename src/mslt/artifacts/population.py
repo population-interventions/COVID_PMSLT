@@ -30,6 +30,9 @@ class Population:
         # Remove strata that have already reached the terminal age.
         df = df[~ (df.age == df['age'].max())]
 
+        #convert age to float for non-year timesteps
+        df['age'] = df['age'].astype(float)
+
         # Sort the rows.
         df = df.sort_values(by=['year', 'age', 'sex']).reset_index(drop=True)
 
@@ -41,7 +44,7 @@ class Population:
 
     def years(self):
         """Return an iterator over the simulation period."""
-        return range(self.year_start, self.year_end + 1)
+        return range(int(self.year_start), int(self.year_end + 1))
 
     def get_population(self):
         """Return the initial population size for each stratum."""
@@ -70,6 +73,9 @@ class Population:
         df = self._data[['age', 'sex', 'disability_rate']]
         df = df.rename(columns={'disability_rate': 'value'})
 
+        #convert age to float for non-year timesteps
+        df['age'] = df['age'].astype(float)
+
         # Replace 'age' with age groups.
         df = df.rename(columns={'age': 'age_start'})
         df.insert(df.columns.get_loc('age_start') + 1,
@@ -96,6 +102,9 @@ class Population:
             df['year'] = year
             tables.append(df.copy())
 
+        #convert age to float for non-year timesteps
+        df['age'] = df['age'].astype(float)
+
         df = pd.concat(tables).sort_values(['year', 'age', 'sex'])
         df = df.reset_index(drop=True)
 
@@ -115,6 +124,8 @@ class Population:
         df_acmr = df_acmr.rename(columns={'mortality_rate': 'value'})
         base_acmr = df_acmr['value'].copy()
 
+        #convert age to float for non-year timesteps
+        df_acmr['age'] = df_acmr['age'].astype(float)
         # Replace 'age' with age groups.
         df_acmr = df_acmr.rename(columns={'age': 'age_start'})
         df_acmr.insert(df_acmr.columns.get_loc('age_start') + 1,

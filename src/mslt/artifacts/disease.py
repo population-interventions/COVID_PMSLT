@@ -40,7 +40,7 @@ def sample_disease_rate_from(year_start, year_end, data, rate_name, apc_data,
     apc_index_cols = ['age', 'sex']
 
     tables = []
-    years = range(year_start, year_end + 1)
+    years = range(int(year_start), int(year_end + 1))
 
     if apc_data is not None and value_col in apc_data.columns:
         # Sample the annual percent change for each cohort.

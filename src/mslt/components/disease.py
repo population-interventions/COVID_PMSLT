@@ -82,6 +82,64 @@ class AcuteDisease:
         return yld_rate + delta
 
 
+class DrawDisease:
+    """
+    An draw disease is simulated external to the PMSLT and has its mortality and
+    morbidity provided, per age, year, sex and draw. The draw disease does not
+    occur in BAU.
+
+    Parameters
+    ----------
+    name
+        The disease name (referred to as `<disease>` here).
+
+    """
+
+    def __init__(self, name):
+        self._name = name
+        
+    @property
+    def name(self):
+        return self._name
+
+    def setup(self, builder):
+        """Load the morbidity and mortality data."""
+        mty_data = builder.data.load(f'draw_disease.{self.name}.mortality')
+        mty_rate = builder.lookup.build_table(mty_data, 
+                                              key_columns=['sex'], 
+                                              parameter_columns=['age','year'])
+        yld_data = builder.data.load(f'draw_disease.{self.name}.morbidity')
+        yld_rate = builder.lookup.build_table(yld_data,
+                                              key_columns=['sex'], 
+                                              parameter_columns=['age','year'])
+        print(mty_rate)
+        self.excess_mortality = builder.value.register_rate_producer(
+            f'{self.name}.excess_mortality',
+            source=mty_rate)
+        self.disability_rate = builder.value.register_rate_producer(
+            f'{self.name}.yld_rate',
+            source=yld_rate)
+        builder.value.register_value_modifier('mortality_rate', self.mortality_adjustment)
+        builder.value.register_value_modifier('yld_rate', self.disability_adjustment)
+
+    def mortality_adjustment(self, index, mortality_rate):
+        """
+        Adjust the all-cause mortality rate in the intervention scenario, to
+        account for any change in prevalence (relative to the BAU scenario).
+        """
+        delta = self.excess_mortality(index)
+        return mortality_rate + delta
+
+    def disability_adjustment(self, index, yld_rate):
+        """
+        Adjust the years lost due to disability (YLD) rate in the intervention
+        scenario, to account for any change in prevalence (relative to the BAU
+        scenario).
+        """
+        delta = self.disability_rate(index)
+        return yld_rate + delta
+
+
 class Disease:
     """This component characterises a chronic disease.
 
