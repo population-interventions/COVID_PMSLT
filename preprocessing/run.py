@@ -6,6 +6,7 @@ from tqdm import tqdm
 import time
 import os
 
+fileCreated = {}
 
 def GetCohortData(cohortFile):
     df = pd.read_csv(cohortFile + '.csv', 
@@ -18,14 +19,52 @@ def GetCohortData(cohortFile):
     return df
 
 
-def GetMorbMortData(cohortFile):
+def GetEffectsData(cohortFile):
     df = pd.read_csv(cohortFile + '.csv',
                 header=[0])
-    print(df)
+    df = df.set_index('age')
     return df
 
 
-def ProcessChunk(df, chortDf):
+def OutputToFile(df, path, fileAppend):
+    # Called like this. Splits each random seed into its own file.
+    #for value in chunk.index.unique('rand_seed'):
+    #    OutputToFile(chunk.loc[value], filename, value)
+    fullFilePath = path + '_' + str(fileAppend) + '.csv'
+    if fileCreated.get(fileAppend):
+        # Append
+        df.to_csv(fullFilePath, mode='a', index=False, header=False)
+    else:
+        fileCreated[fileAppend] = True
+        df.to_csv(fullFilePath, index=False) 
+
+
+def Output(name, path, df, cohortEffect):
+    df = df.transpose()
+    df = df.mul(cohortEffect[name], axis=0)
+    df = df.transpose()
+    
+    df = df.stack(level=[0,1])
+    index = df.index.to_frame(index=False)
+    index = index.drop(columns=['run', 'global_transmissibility'])
+    df.index = pd.MultiIndex.from_frame(index)
+    df = df.rename('value')
+    
+    for value in index.rand_seed.unique():
+        rdf = df[df.index.isin([value], level=0)]
+        rdf = rdf.reset_index()
+        rdf = rdf.drop(columns='rand_seed')
+        OutputToFile(rdf, path, value)
+
+
+def LoadAndAppendDraw(path, inName, outName, output):
+    df = pd.read_csv(path + '_' + inName + '.csv',
+                header=[0])
+    print(df)
+    
+
+
+def ProcessChunk(df, chortDf, cohortEffect):
     df.columns.set_levels(df.columns.levels[1].astype(int), level=1, inplace=True)
     df.columns.set_levels(df.columns.levels[2].astype(int), level=2, inplace=True)
     df.sort_values(['cohort', 'day'], axis=1, inplace=True)
@@ -56,21 +95,37 @@ def ProcessChunk(df, chortDf):
             df[age + 2.5, j] = df[age, j]/2
     
     df = df.drop(columns=ageCols, level=0)
-    print(df.head(10))
+    cohortEffect = cohortEffect.reindex(df.transpose().index, level=0)
+    Output('mort', 'step1/mort', df, cohortEffect)
+    Output('morb', 'step1/morb', df, cohortEffect)
+    Output('cost', 'step1/cost', df, cohortEffect)
     
 
 def Process(filename, cohortFile):
     cohortData = GetCohortData(cohortFile)
-    morbMort = GetMorbMortData('morbmort')
-    chunksize = 4 ** 4
+    cohortEffect = GetEffectsData('chort_effects')
+    chunksize = 4 ** 7
     
-    for chunk in pd.read_csv(filename + '.csv', 
+    for chunk in tqdm(pd.read_csv(filename + '.csv', 
                              index_col=list(range(9)),
                              header=list(range(3)),
                              dtype={'day' : int, 'cohort' : int},
-                             chunksize=chunksize):
-        ProcessChunk(chunk, cohortData)
-        return
+                             chunksize=chunksize),
+                      total=16):
+        ProcessChunk(chunk, cohortData, cohortEffect)
     
 
-Process('abm_out/processed_infect_unique', 'abm_out/processed_static')
+def CombineDraws(path):
+    fileList = os.listdir(path)
+    nameList = list(set(list(map(
+        lambda x: int(x[(x.find('_') + 1):x.find('.')]), fileList))))
+    nameList.sort()
+    for index, value in enumerate(nameList):
+        LoadAndAppendDraw('step1/mort', str(value), str(index), 'step2/acute_disease.covid.mortality')
+        LoadAndAppendDraw('step1/morb', str(value), str(index), 'step2/acute_disease.covid.morbidity')
+        LoadAndAppendDraw('step1/cost', str(value), str(index), 'step2/acute_disease.covid.expenditure')
+        
+        
+
+#Process('abm_out/processed_infect_unique', 'abm_out/processed_static')
+CombineDraws('step1')
