@@ -155,7 +155,7 @@ def collapse_tobacco_disease_rr(data):
     return data
 
 
-def assemble_tobacco_artifacts(num_draws, output_path: Path, seed: int = RANDOM_SEED):
+def assemble_artifacts(num_draws, output_path: Path, seed: int = RANDOM_SEED):
     """
     Assemble the data artifacts required to simulate the various tobacco
     interventions.
@@ -172,8 +172,7 @@ def assemble_tobacco_artifacts(num_draws, output_path: Path, seed: int = RANDOM_
         random samples.
 
     """
-    data_dir_non_maori = get_data_dir('non-maori')
-    data_dir_maori = get_data_dir('maori')
+    data_dir_non_maori = get_data_dir('data')
     prng = np.random.RandomState(seed=seed)
     logger = logging.getLogger(__name__)
 
@@ -181,11 +180,6 @@ def assemble_tobacco_artifacts(num_draws, output_path: Path, seed: int = RANDOM_
     p_nm = Population(data_dir_non_maori, YEAR_START)
     l_nm = Diseases(data_dir_non_maori, YEAR_START, p_nm.year_end)
     t_nm = Tobacco(data_dir_non_maori, YEAR_START, p_nm.year_end)
-
-    # Instantiate components for the Maori population.
-    p_m = Population(data_dir_maori, YEAR_START)
-    l_m = Diseases(data_dir_maori, YEAR_START, p_m.year_end)
-    t_m = Tobacco(data_dir_maori, YEAR_START, p_m.year_end)
 
     # Define data structures to record the samples from the unit interval that
     # are used to sample each rate/quantity, so that they can be correlated
@@ -203,7 +197,6 @@ def assemble_tobacco_artifacts(num_draws, output_path: Path, seed: int = RANDOM_
     smp_tob_i = prng.random_sample(num_draws)
     smp_tob_r = prng.random_sample(num_draws)
     smp_tob_elast = prng.random_sample(num_draws)
-    smp_tob_elast_maori = prng.random_sample(num_draws)
 
     # Define the sampling distributions in terms of their family and their
     # *relative* standard deviation; they will be used to draw samples for
@@ -220,8 +213,6 @@ def assemble_tobacco_artifacts(num_draws, output_path: Path, seed: int = RANDOM_
     dist_tob_i = Beta(sd_pcnt=20)
     dist_tob_r = Beta(sd_pcnt=20)
     dist_tob_elast = Normal(sd_pcnt=20)
-    dist_tob_elast_maori_scale = Normal(sd_pcnt=10)
-    tob_elast_maori_scale = 1.2
 
     logger.info('{} Generating samples'.format(
         datetime.datetime.now().strftime("%H:%M:%S")))
@@ -272,7 +263,6 @@ def assemble_tobacco_artifacts(num_draws, output_path: Path, seed: int = RANDOM_
 
         # Write the data tables to each artifact file.
         art_nm = Artifact(str(nm_artifact_file))
-        art_m = Artifact(str(m_artifact_file))
 
         logger.info('{} Writing population tables'.format(
             datetime.datetime.now().strftime("%H:%M:%S")))
@@ -280,61 +270,34 @@ def assemble_tobacco_artifacts(num_draws, output_path: Path, seed: int = RANDOM_
         # Write the main population tables.
         write_table(art_nm, 'population.structure',
                      p_nm.get_population())
-        write_table(art_m, 'population.structure',
-                    p_m.get_population())
         write_table(art_nm, 'cause.all_causes.disability_rate',
                      p_nm.sample_disability_rate_from(dist_yld, smp_yld))
-        write_table(art_m, 'cause.all_causes.disability_rate',
-                    p_m.sample_disability_rate_from(dist_yld, smp_yld))
         write_table(art_nm, 'cause.all_causes.mortality',
                      p_nm.get_mortality_rate())
-        write_table(art_m, 'cause.all_causes.mortality',
-                    p_m.get_mortality_rate())
 
         # Write the chronic disease tables.
         for name, disease_nm in l_nm.chronic.items():
             logger.info('{} Writing tables for {}'.format(
                 datetime.datetime.now().strftime("%H:%M:%S"), name))
 
-            disease_m = l_m.chronic[name]
-
             write_table(art_nm, 'chronic_disease.{}.incidence'.format(name),
                          disease_nm.sample_i_from(
                              dist_chronic_i, dist_chronic_apc,
                              smp_chronic_i[name], smp_chronic_apc[name]))
-            write_table(art_m, 'chronic_disease.{}.incidence'.format(name),
-                        disease_m.sample_i_from(
-                            dist_chronic_i, dist_chronic_apc,
-                            smp_chronic_i[name], smp_chronic_apc[name]))
             write_table(art_nm, 'chronic_disease.{}.remission'.format(name),
                          disease_nm.sample_r_from(
-                             dist_chronic_r, dist_chronic_apc,
-                             smp_chronic_r[name], smp_chronic_apc[name]))
-            write_table(art_m, 'chronic_disease.{}.remission'.format(name),
-                         disease_m.sample_r_from(
                              dist_chronic_r, dist_chronic_apc,
                              smp_chronic_r[name], smp_chronic_apc[name]))
             write_table(art_nm, 'chronic_disease.{}.mortality'.format(name),
                          disease_nm.sample_f_from(
                              dist_chronic_f, dist_chronic_apc,
                              smp_chronic_f[name], smp_chronic_apc[name]))
-            write_table(art_m, 'chronic_disease.{}.mortality'.format(name),
-                        disease_m.sample_f_from(
-                            dist_chronic_f, dist_chronic_apc,
-                            smp_chronic_f[name], smp_chronic_apc[name]))
             write_table(art_nm, 'chronic_disease.{}.morbidity'.format(name),
                          disease_nm.sample_yld_from(
                              dist_chronic_yld, dist_chronic_apc,
                              smp_chronic_yld[name], smp_chronic_apc[name]))
-            write_table(art_m, 'chronic_disease.{}.morbidity'.format(name),
-                        disease_m.sample_yld_from(
-                            dist_chronic_yld, dist_chronic_apc,
-                            smp_chronic_yld[name], smp_chronic_apc[name]))
             write_table(art_nm, 'chronic_disease.{}.prevalence'.format(name),
                          disease_nm.sample_prevalence_from(
-                             dist_chronic_prev, smp_chronic_prev[name]))
-            write_table(art_m, 'chronic_disease.{}.prevalence'.format(name),
-                         disease_m.sample_prevalence_from(
                              dist_chronic_prev, smp_chronic_prev[name]))
 
         # Write the acute disease tables.
@@ -342,19 +305,11 @@ def assemble_tobacco_artifacts(num_draws, output_path: Path, seed: int = RANDOM_
             logger.info('{} Writing tables for {}'.format(
                 datetime.datetime.now().strftime("%H:%M:%S"), name))
 
-            disease_m = l_m.acute[name]
-
             write_table(art_nm, 'acute_disease.{}.mortality'.format(name),
                          disease_nm.sample_excess_mortality_from(
                              dist_acute_f, smp_acute_f[name]))
-            write_table(art_m, 'acute_disease.{}.mortality'.format(name),
-                         disease_m.sample_excess_mortality_from(
-                             dist_acute_f, smp_acute_f[name]))
             write_table(art_nm, 'acute_disease.{}.morbidity'.format(name),
                          disease_nm.sample_disability_from(
-                             dist_acute_yld, smp_acute_yld[name]))
-            write_table(art_m, 'acute_disease.{}.morbidity'.format(name),
-                         disease_m.sample_disability_from(
                              dist_acute_yld, smp_acute_yld[name]))
 
         # Write the risk factor tables.
@@ -364,12 +319,8 @@ def assemble_tobacco_artifacts(num_draws, output_path: Path, seed: int = RANDOM_
 
             write_table(art_nm, 'risk_factor.{}.incidence'.format(name),
                          t_nm.sample_i_from(dist_tob_i, smp_tob_i))
-            write_table(art_m, 'risk_factor.{}.incidence'.format(name),
-                        t_m.sample_i_from(dist_tob_i, smp_tob_i))
             write_table(art_nm, 'risk_factor.{}.remission'.format(name),
                          t_nm.sample_r_from(dist_tob_r, smp_tob_r))
-            write_table(art_m, 'risk_factor.{}.remission'.format(name),
-                        t_m.sample_r_from(dist_tob_r, smp_tob_r))
 
             if recovery == 0:
                 # Cessation confers immediate recovery.
@@ -377,37 +328,20 @@ def assemble_tobacco_artifacts(num_draws, output_path: Path, seed: int = RANDOM_
                              collapse_tobacco_mortality_rr(
                                  t_nm.get_expected_mortality_rr(),
                                  name))
-                write_table(art_m, 'risk_factor.{}.mortality_relative_risk'.format(name),
-                            collapse_tobacco_mortality_rr(
-                                t_m.get_expected_mortality_rr(),
-                                name))
                 write_table(art_nm, 'risk_factor.{}.disease_relative_risk'.format(name),
                              collapse_tobacco_disease_rr(
                                  t_nm.sample_disease_rr_from(smp_tob_dis_tbl)))
-                write_table(art_m, 'risk_factor.{}.disease_relative_risk'.format(name),
-                            collapse_tobacco_disease_rr(
-                                t_m.sample_disease_rr_from(smp_tob_dis_tbl)))
                 write_table(art_nm, 'risk_factor.{}.prevalence'.format(name),
                              collapse_tobacco_prevalence(
                                  t_nm.get_expected_prevalence(),
                                  name))
-                write_table(art_m, 'risk_factor.{}.prevalence'.format(name),
-                             collapse_tobacco_prevalence(
-                                 t_m.get_expected_prevalence(),
-                                 name))
             else:
                 write_table(art_nm, 'risk_factor.{}.mortality_relative_risk'.format(name),
                              t_nm.get_expected_mortality_rr())
-                write_table(art_m, 'risk_factor.{}.mortality_relative_risk'.format(name),
-                            t_m.get_expected_mortality_rr())
                 write_table(art_nm, 'risk_factor.{}.disease_relative_risk'.format(name),
                              t_nm.sample_disease_rr_from(smp_tob_dis_tbl))
-                write_table(art_m, 'risk_factor.{}.disease_relative_risk'.format(name),
-                            t_m.sample_disease_rr_from(smp_tob_dis_tbl))
                 write_table(art_nm, 'risk_factor.{}.prevalence'.format(name),
                              t_nm.get_expected_prevalence())
-                write_table(art_m, 'risk_factor.{}.prevalence'.format(name),
-                            t_m.get_expected_prevalence())
 
             logger.info('{}     Tax effects (non-Maori)'.format(
                 datetime.datetime.now().strftime("%H:%M:%S")))
@@ -427,28 +361,7 @@ def assemble_tobacco_artifacts(num_draws, output_path: Path, seed: int = RANDOM_
             df = tob_tax_nm.loc[:, remission_cols].rename(columns={remission_effect_col: 'value'})
             write_table(art_nm, 'risk_factor.{}.tax_effect_remission'.format(name), df)
             del tob_tax_nm
-
-            logger.info('{}     Tax effects (Maori)'.format(
-                datetime.datetime.now().strftime("%H:%M:%S")))
-            tob_elast_m = t_m.scale_price_elasticity_from(
-                tob_elast_nm,
-                tob_elast_maori_scale,
-                Normal(sd_pcnt=10),
-                smp_tob_elast_maori)
-
-            tob_tax_m = t_m.sample_tax_effects_from_elasticity_wide(tob_elast_m)
-            incidence_cols = [c for c in tob_tax_m.columns
-                              if c != remission_effect_col]
-            remission_cols = [c for c in tob_tax_m.columns
-                              if c != incidence_effect_col]
-            df = tob_tax_m.loc[:, incidence_cols].rename(columns={incidence_effect_col: 'value'})
-            write_table(art_m, 'risk_factor.{}.tax_effect_incidence'.format(name), df)
-            df = tob_tax_m.loc[:, remission_cols].rename(columns={remission_effect_col: 'value'})
-            write_table(art_m, 'risk_factor.{}.tax_effect_remission'.format(name), df)
-            del tob_tax_m
             del tob_elast_nm
-            del tob_elast_m
 
         print(nm_artifact_file)
-        print(m_artifact_file)
 

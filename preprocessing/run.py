@@ -8,6 +8,8 @@ import os
 
 fileCreated = {}
 
+############### Step 1 ###############
+
 def GetCohortData(cohortFile):
     df = pd.read_csv(cohortFile + '.csv', 
                 index_col=[0],
@@ -30,12 +32,15 @@ def OutputToFile(df, path, fileAppend):
     # Called like this. Splits each random seed into its own file.
     #for value in chunk.index.unique('rand_seed'):
     #    OutputToFile(chunk.loc[value], filename, value)
+    if not fileCreated.get(path):
+        fileCreated[path] = {}
+    
     fullFilePath = path + '_' + str(fileAppend) + '.csv'
-    if fileCreated.get(fileAppend):
+    if fileCreated.get(path).get(fileAppend):
         # Append
         df.to_csv(fullFilePath, mode='a', index=False, header=False)
     else:
-        fileCreated[fileAppend] = True
+        fileCreated[path][fileAppend] = True
         df.to_csv(fullFilePath, index=False) 
 
 
@@ -55,13 +60,6 @@ def Output(name, path, df, cohortEffect):
         rdf = rdf.reset_index()
         rdf = rdf.drop(columns='rand_seed')
         OutputToFile(rdf, path, value)
-
-
-def LoadAndAppendDraw(path, inName, outName, output):
-    df = pd.read_csv(path + '_' + inName + '.csv',
-                header=[0])
-    print(df)
-    
 
 
 def ProcessChunk(df, chortDf, cohortEffect):
@@ -111,21 +109,75 @@ def Process(filename, cohortFile):
                              header=list(range(3)),
                              dtype={'day' : int, 'cohort' : int},
                              chunksize=chunksize),
-                      total=16):
+                      total=4):
         ProcessChunk(chunk, cohortData, cohortEffect)
+
+
+############### Step 2 ###############
+
+def LoadColumn(path, inName, output):
+    return pd.read_csv(path + '_' + inName + '.csv',
+                header=[0],
+                index_col=list(range(8)))
+   
+
+def CombineCsvColumns(path, output, nameList):
+    df = None
+    for n, value in tqdm(enumerate(nameList), total=len(nameList)):
+        if n == 0:
+            df = LoadColumn(path, str(value), output)
+            df.rename(columns={'value' : 'draw_0'}, inplace=True)
+        else:
+            df['draw_' + str(n)] = LoadColumn(path, str(value), output)['value']
+
+    index = df.index.to_frame()
+    index['year_start'] = (index['month'] - 0.5)/12
+    index['year_end']   = (index['month'] + 0.5)/12
+    index['age_start']  = index['age'] - 2.5
+    index['age_end']    = index['age'] + 2.5
+    index = index.drop(columns=['age', 'month'])
+    df.index = pd.MultiIndex.from_frame(index)
     
+    df.to_csv(output + '.csv')
+
 
 def CombineDraws(path):
     fileList = os.listdir(path)
     nameList = list(set(list(map(
         lambda x: int(x[(x.find('_') + 1):x.find('.')]), fileList))))
     nameList.sort()
-    for index, value in enumerate(nameList):
-        LoadAndAppendDraw('step1/mort', str(value), str(index), 'step2/acute_disease.covid.mortality')
-        LoadAndAppendDraw('step1/morb', str(value), str(index), 'step2/acute_disease.covid.morbidity')
-        LoadAndAppendDraw('step1/cost', str(value), str(index), 'step2/acute_disease.covid.expenditure')
-        
-        
+    CombineCsvColumns('step1/mort', 'step2/acute_disease.covid.mortality', nameList)
+    CombineCsvColumns('step1/morb', 'step2/acute_disease.covid.morbidity', nameList)
+    CombineCsvColumns('step1/cost', 'step2/acute_disease.covid.expenditure', nameList)
+  
+
+############### Step 3 ###############      
+
+def ProcessDrawTable(path, output, filename):
+    df = pd.read_csv(path + '/' + filename + '.csv',
+                header=[0],
+                index_col=list(range(10)))
+    
+    enddf = df[df.index.isin([11.5/12], level=7)]
+    enddf = enddf*0
+    index = enddf.index.to_frame()
+    index['year_start'] = index['year_end']
+    index['year_end']   = 120
+    enddf.index = pd.MultiIndex.from_frame(index)
+    df = df.append(enddf)
+    
+    df = pd.concat([df, df], axis=1, keys=('male','female'))/2
+    df.columns.set_names('sex', level=[0], inplace=True)
+    df = df.stack(level=[0])
+    
+    df.to_csv(output + '/' + filename + '.csv')
+    
+
+def ProcessEachDrawTable(path, output):
+    ProcessDrawTable(path, output, 'acute_disease.covid.mortality')
+    ProcessDrawTable(path, output, 'acute_disease.covid.morbidity')
+    ProcessDrawTable(path, output, 'acute_disease.covid.expenditure')
 
 #Process('abm_out/processed_infect_unique', 'abm_out/processed_static')
-CombineDraws('step1')
+#CombineDraws('step1')
+ProcessEachDrawTable('step2', 'step3')

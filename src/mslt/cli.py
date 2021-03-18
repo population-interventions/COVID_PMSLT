@@ -3,7 +3,7 @@ from pathlib import Path
 
 import click
 
-from mslt.artifacts import assemble_tobacco_artifacts
+from mslt.artifacts import assemble_artifacts
 from mslt.specifications import (create_model_specifications,
                                     create_reduce_acmr_specification,
                                     create_reduce_chd_specification)
@@ -18,12 +18,12 @@ def make_artifacts(scenario):
 
     output_path = Path('.').resolve() / 'artifacts'
     output_path.mkdir(exist_ok=True)
-    draws = 0 if scenario == 'minimal' else 2000
+    draws = 0 if scenario == 'minimal' else 99
 
     logging.info(f'Generating artifact for scenario {scenario} with {draws} '
                  f'draws at {str(output_path)}')
 
-    assemble_tobacco_artifacts(draws, output_path)
+    assemble_artifacts(draws, output_path)
 
 
 @click.command()
