@@ -83,6 +83,7 @@ def ProcessChunk(df, chortDf, cohortEffect):
     # ages 18-30. First redestribute these cohorts sothey align with 10 year
     # increments.
     df[15], df[25] = df[15] + df[25]/5, df[25]*4/5
+
     
     # Then split the 10 year cohorts in half.
     ageCols = [i*10 + 5 for i in range(10)]
@@ -91,6 +92,12 @@ def ProcessChunk(df, chortDf, cohortEffect):
             # TODO, vectorise?
             df[age - 2.5, j] = df[age, j]/2
             df[age + 2.5, j] = df[age, j]/2
+    
+    # Add extra cohorts missing from ABM
+    # Very few people are over 100
+    for j in range(12):
+        df[102.5, j] = 0
+        df[107.5, j] = 0
     
     df = df.drop(columns=ageCols, level=0)
     cohortEffect = cohortEffect.reindex(df.transpose().index, level=0)
@@ -178,6 +185,6 @@ def ProcessEachDrawTable(path, output):
     ProcessDrawTable(path, output, 'acute_disease.covid.morbidity')
     ProcessDrawTable(path, output, 'acute_disease.covid.expenditure')
 
-#Process('abm_out/processed_infect_unique', 'abm_out/processed_static')
-#CombineDraws('step1')
+Process('abm_out/processed_infect_unique', 'abm_out/processed_static')
+CombineDraws('step1')
 ProcessEachDrawTable('step2', 'step3')

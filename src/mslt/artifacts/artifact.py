@@ -10,13 +10,14 @@ from vivarium.framework.artifact import Artifact
 
 from mslt.artifacts.population import Population
 from mslt.artifacts.disease import Diseases
+from mslt.artifacts.disease_covid import Covid
 from mslt.artifacts.risk_factor import Tobacco
 from mslt.artifacts.uncertainty import Normal, Beta, LogNormal
 from mslt.artifacts.utilities import get_data_dir
 
 YEAR_START = 2011
 RANDOM_SEED = 49430
-WRITE_CSV = True
+WRITE_CSV = False
 
 def output_csv_mkdir(data, path):
     """
@@ -67,9 +68,10 @@ def write_table(artifact, path, data):
     data.set_index([col_name for col_name in data.columns if col_name in col_index_filters], inplace =True)
     
     #Convert wide to long for tobacco
-    if 'value' not in data.columns:
-        data = pd.melt(data.reset_index(), id_vars=data.index.names,var_name = 'measure').\
-        set_index(data.index.names+['measure'])
+    # TODO: Check if still needed?
+    #if 'value' not in data.columns:
+    #    data = pd.melt(data.reset_index(), id_vars=data.index.names,var_name = 'measure').\
+    #    set_index(data.index.names+['measure'])
 
     if WRITE_CSV:
       output_csv_mkdir(data, path)
@@ -182,7 +184,7 @@ def assemble_artifacts(num_draws, output_path: Path, seed: int = RANDOM_SEED):
                  pop.sample_disability_rate_from(dist_yld, smp_yld))
     write_table(art_nm, 'cause.all_causes.mortality',
                  pop.get_mortality_rate())
-
+    
     # Write the chronic disease tables.
     for name, disease_nm in diseaseList.chronic.items():
         logger.info('{} Writing tables for {}'.format(
@@ -220,5 +222,11 @@ def assemble_artifacts(num_draws, output_path: Path, seed: int = RANDOM_SEED):
                      disease_nm.sample_disability_from(
                          dist_acute_yld, smp_acute_yld[name]))
 
-    print(nm_artifact_file)
 
+    # Do some ad hoc stuff for covid
+    logger.info('{} Writing covid tables'.format(
+        datetime.datetime.now().strftime("%H:%M:%S")))
+    
+    Covid(art_nm, data_dir, YEAR_START, pop.year_end, pop.get_population(), write_table)
+
+    print(nm_artifact_file)
