@@ -33,7 +33,7 @@ configuration:
     input_data:
         # Change this to "mslt_tobacco_maori_20-years.hdf" for the Maori
         # population.
-        artifact_path: C:\Dev\Repos\simpleTobacco/artifacts/mslt_tobacco_non-maori_20-years.hdf
+        artifact_path: C:\Dev\Repos\COVID_PMSLT\artifacts\mslt_tobacco_non-maori.hdf
         input_draw_number: 0
         location: ''
     interpolation:

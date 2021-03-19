@@ -43,7 +43,6 @@ From the COVID_PMSLT folder, run::
 
 To test
     (COVID_PMSLT) $> simulate run -v model_specs/mslt_test.yaml
-    (COVID_PMSLT) $> simulate run -v model_specs/mslt_delay_test.yaml
 
 where *model_spec* is a valid .yaml model specification file.
 Results are stored in COVID_PMSLT/results

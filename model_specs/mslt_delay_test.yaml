@@ -30,7 +30,7 @@ components:
 
 configuration:
     input_data:
-        artifact_path: C:\Dev\Repos\vivarium_mslt_update/artifacts/mslt_tobacco_maori_0-years.hdf
+        artifact_path: C:\Dev\Repos\COVID_PMSLT\artifacts\mslt_tobacco_non-maori.hdf
         input_draw_number: 0
         location: ''
     interpolation:
