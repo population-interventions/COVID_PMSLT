@@ -8,9 +8,10 @@ import pathlib
 
 class Covid:
 
-    def __init__(self, artifact, data_dir, year_start, year_end, pop, write_table):
+    def __init__(self, artifact, data_dir, year_start, year_end, pop, write_table, num_draws):
         self._year_start = year_start
         self._year_end = year_end
+        self.keep_cols = ['draw_' + str(i) for i in range(num_draws + 1)]
         self.data_dir = '{}/covid/'.format(data_dir)
         self.artifact = artifact
         self.pop = pop
@@ -33,6 +34,8 @@ class Covid:
             return
         
         df = df.reset_index()
+        df['draw_0'] = df.mean(axis=1)
+        df[df.columns[df.columns.isin(self.keep_cols)]]
         self.write_table(self.artifact, 'acute_disease.covid_' + prefix + '.' + suffix, df)
 
 

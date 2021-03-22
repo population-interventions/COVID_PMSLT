@@ -17,7 +17,7 @@ from mslt.artifacts.utilities import get_data_dir
 
 YEAR_START = 2011
 RANDOM_SEED = 49430
-WRITE_CSV = False
+WRITE_CSV = True
 
 def output_csv_mkdir(data, path):
     """
@@ -177,6 +177,12 @@ def assemble_artifacts(num_draws, output_path: Path, seed: int = RANDOM_SEED):
     logger.info('{} Writing population tables'.format(
         datetime.datetime.now().strftime("%H:%M:%S")))
 
+    # Do some ad hoc stuff for covid
+    logger.info('{} Writing covid tables'.format(
+        datetime.datetime.now().strftime("%H:%M:%S")))
+    
+    Covid(art_nm, data_dir, YEAR_START, pop.year_end, pop.get_population(), write_table, num_draws)
+
     # Write the main population tables.
     write_table(art_nm, 'population.structure',
                  pop.get_population())
@@ -221,12 +227,5 @@ def assemble_artifacts(num_draws, output_path: Path, seed: int = RANDOM_SEED):
         write_table(art_nm, 'acute_disease.{}.morbidity'.format(name),
                      disease_nm.sample_disability_from(
                          dist_acute_yld, smp_acute_yld[name]))
-
-
-    # Do some ad hoc stuff for covid
-    logger.info('{} Writing covid tables'.format(
-        datetime.datetime.now().strftime("%H:%M:%S")))
-    
-    Covid(art_nm, data_dir, YEAR_START, pop.year_end, pop.get_population(), write_table)
 
     print(nm_artifact_file)

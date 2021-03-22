@@ -1,0 +1,34 @@
+components:
+    mslt:
+        components:
+            population:
+                - BasePopulation()
+                - Mortality()
+                - Disability()
+            disease:
+                - AcuteDisease('covid_param_policyLooseSupress_param_vac1_tran_reduct90_param_vac2_tran_reduct75_param_vac_uptake75_param_trigger_loosenFalse_R0375_')
+            observer:
+                - MorbidityMortality()
+
+configuration:
+    input_data:
+        # Change this to "mslt_tobacco_maori_20-years.hdf" for the Maori
+        # population.
+        artifact_path: C:\Dev\Repos\COVID_PMSLT\artifacts\mslt_tobacco_non-maori.hdf
+        input_draw_number: 0
+        location: ''
+    interpolation:
+        validate: False
+    population:
+        # The population size here is the number of cohorts.
+        # There are 22 age bins (0-4, 5-9, ..., 105-109) for females and for
+        # males, making a total of 44 cohorts.
+        population_size: 44
+    time:
+        start:
+            year: 2011
+        end:
+            year: 2012
+        step_size: 30.4166667  # In days
+    observer:
+        output_prefix: results/mslt_covid_test2

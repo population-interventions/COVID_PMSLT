@@ -18,7 +18,7 @@ def make_artifacts(scenario):
 
     output_path = Path('.').resolve() / 'artifacts'
     output_path.mkdir(exist_ok=True)
-    draws = 0 if scenario == 'minimal' else 99
+    draws = 0 if scenario == 'minimal' else 100
 
     logging.info(f'Generating artifact for scenario {scenario} with {draws} '
                  f'draws at {str(output_path)}')

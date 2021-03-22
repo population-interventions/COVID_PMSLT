@@ -133,9 +133,9 @@ def CombineCsvColumns(path, output, nameList):
     for n, value in tqdm(enumerate(nameList), total=len(nameList)):
         if n == 0:
             df = LoadColumn(path, str(value), output)
-            df.rename(columns={'value' : 'draw_0'}, inplace=True)
+            df.rename(columns={'value' : 'draw_1'}, inplace=True)
         else:
-            df['draw_' + str(n)] = LoadColumn(path, str(value), output)['value']
+            df['draw_' + str(n + 1)] = LoadColumn(path, str(value), output)['value']
 
     index = df.index.to_frame()
     index['year_start'] = (index['month'] - 0.5)/12
@@ -185,6 +185,7 @@ def ProcessEachDrawTable(path, output):
     ProcessDrawTable(path, output, 'acute_disease.covid.morbidity')
     ProcessDrawTable(path, output, 'acute_disease.covid.expenditure')
 
-Process('abm_out/processed_infect_unique', 'abm_out/processed_static')
+
+#Process('abm_out/processed_infect_unique', 'abm_out/processed_static')
 CombineDraws('step1')
 ProcessEachDrawTable('step2', 'step3')
