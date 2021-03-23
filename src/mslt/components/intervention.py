@@ -8,6 +8,36 @@ simulations.
 
 """
 
+class LockdownAcuteDisease:
+    """Interventions that modify an acute disease fatality rate."""
+
+    def __init__(self, name):
+        self._name = name
+        
+    @property
+    def name(self):
+        return self._name
+
+    def setup(self, builder):
+        self.config = builder.configuration
+        self.scale = self.config.intervention[self.name].mortality_scale
+        if self.scale < 0:
+            raise ValueError('Invalid mortality scale: {}'.format(self.scale))
+        rate = '{}_intervention.excess_mortality'.format(self.name)
+        builder.value.register_value_modifier(rate, self.mortality_adjustment)
+
+        self.scale = self.config.intervention[self.name].yld_scale
+        if self.scale < 0:
+            raise ValueError('Invalid YLD scale: {}'.format(self.scale))
+        rate = '{}_intervention.yld_rate'.format(self.name)
+        builder.value.register_value_modifier(rate, self.disability_adjustment)
+
+    def mortality_adjustment(self, index, rates):
+        return rates * self.scale
+
+    def disability_adjustment(self, index, rates):
+        return rates * self.scale
+
 
 class ModifyAllCauseMortality:
     """Interventions that modify the all-cause mortality rate."""

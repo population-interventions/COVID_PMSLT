@@ -21,13 +21,6 @@ def GetCohortData(cohortFile):
     return df
 
 
-def GetEffectsData(cohortFile):
-    df = pd.read_csv(cohortFile + '.csv',
-                header=[0])
-    df = df.set_index('age')
-    return df
-
-
 def OutputToFile(df, path, fileAppend):
     # Called like this. Splits each random seed into its own file.
     #for value in chunk.index.unique('rand_seed'):
@@ -44,11 +37,7 @@ def OutputToFile(df, path, fileAppend):
         df.to_csv(fullFilePath, index=False) 
 
 
-def Output(name, path, df, cohortEffect):
-    df = df.transpose()
-    df = df.mul(cohortEffect[name], axis=0)
-    df = df.transpose()
-    
+def Output(name, path, df):
     df = df.stack(level=[0,1])
     index = df.index.to_frame(index=False)
     index = index.drop(columns=['run', 'global_transmissibility'])
@@ -62,7 +51,7 @@ def Output(name, path, df, cohortEffect):
         OutputToFile(rdf, path, value)
 
 
-def ProcessChunk(df, chortDf, cohortEffect):
+def ProcessChunk(df, chortDf):
     df.columns.set_levels(df.columns.levels[1].astype(int), level=1, inplace=True)
     df.columns.set_levels(df.columns.levels[2].astype(int), level=2, inplace=True)
     df.sort_values(['cohort', 'day'], axis=1, inplace=True)
@@ -100,15 +89,13 @@ def ProcessChunk(df, chortDf, cohortEffect):
         df[107.5, j] = 0
     
     df = df.drop(columns=ageCols, level=0)
-    cohortEffect = cohortEffect.reindex(df.transpose().index, level=0)
-    Output('mort', 'step1/mort', df, cohortEffect)
-    Output('morb', 'step1/morb', df, cohortEffect)
-    Output('cost', 'step1/cost', df, cohortEffect)
+    Output('mort', 'step1/mort', df)
+    Output('morb', 'step1/morb', df)
+    Output('cost', 'step1/cost', df)
     
 
 def Process(filename, cohortFile):
     cohortData = GetCohortData(cohortFile)
-    cohortEffect = GetEffectsData('chort_effects')
     chunksize = 4 ** 7
     
     for chunk in tqdm(pd.read_csv(filename + '.csv', 
@@ -117,7 +104,7 @@ def Process(filename, cohortFile):
                              dtype={'day' : int, 'cohort' : int},
                              chunksize=chunksize),
                       total=4):
-        ProcessChunk(chunk, cohortData, cohortEffect)
+        ProcessChunk(chunk, cohortData)
 
 
 ############### Step 2 ###############
@@ -137,6 +124,8 @@ def CombineCsvColumns(path, output, nameList):
         else:
             df['draw_' + str(n + 1)] = LoadColumn(path, str(value), output)['value']
 
+    df['draw_0'] = df.mean(axis=1)
+    
     index = df.index.to_frame()
     index['year_start'] = (index['month'] - 0.5)/12
     index['year_end']   = (index['month'] + 0.5)/12
@@ -160,10 +149,19 @@ def CombineDraws(path):
 
 ############### Step 3 ###############      
 
-def ProcessDrawTable(path, output, filename):
+
+def GetEffectsData(file):
+    df = pd.read_csv(file + '.csv',
+                header=[0])
+    df = df.set_index(['age_start', 'sex'])
+    return df
+
+
+def ProcessDrawTable(path, output, filename, multDf):
     df = pd.read_csv(path + '/' + filename + '.csv',
                 header=[0],
                 index_col=list(range(10)))
+    
     
     enddf = df[df.index.isin([11.5/12], level=7)]
     enddf = enddf*0
@@ -177,15 +175,22 @@ def ProcessDrawTable(path, output, filename):
     df.columns.set_names('sex', level=[0], inplace=True)
     df = df.stack(level=[0])
     
+    df = df.mul(multDf, axis=0)
+    df.index = df.index.reorder_levels(order=[
+        'param_policy', 'param_vac_uptake', 'param_vac1_tran_reduct',
+        'param_vac2_tran_reduct', 'param_trigger_loosen', 'R0', 'sex',
+        'age_start', 'age_end', 'year_start', 'year_end'])
+    
     df.to_csv(output + '/' + filename + '.csv')
     
 
 def ProcessEachDrawTable(path, output):
-    ProcessDrawTable(path, output, 'acute_disease.covid.mortality')
-    ProcessDrawTable(path, output, 'acute_disease.covid.morbidity')
-    ProcessDrawTable(path, output, 'acute_disease.covid.expenditure')
+    cohortEffect = GetEffectsData('chort_effects')
+    ProcessDrawTable(path, output, 'acute_disease.covid.mortality', cohortEffect['mort'])
+    ProcessDrawTable(path, output, 'acute_disease.covid.morbidity', cohortEffect['morb'])
+    ProcessDrawTable(path, output, 'acute_disease.covid.expenditure', cohortEffect['cost'])
 
 
 #Process('abm_out/processed_infect_unique', 'abm_out/processed_static')
-CombineDraws('step1')
+#CombineDraws('step1')
 ProcessEachDrawTable('step2', 'step3')

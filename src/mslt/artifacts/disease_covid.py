@@ -33,19 +33,17 @@ class Covid:
                     prefix + levelName + str(name).replace('.', '') + '_')
             return
         
+        df = df[df.columns[df.columns.isin(self.keep_cols)]]
         df = df.reset_index()
-        df['draw_0'] = df.mean(axis=1)
-        df[df.columns[df.columns.isin(self.keep_cols)]]
         self.write_table(self.artifact, 'acute_disease.covid_' + prefix + '.' + suffix, df)
 
 
     def load_diseases_data(self, suffix):
-        logger = logging.getLogger(__name__)
+        #logger = logging.getLogger(__name__)
         path = pathlib.Path(self.data_dir + 'acute_disease.covid.' + suffix + '.csv')
         df = pd.read_csv(path,
                         index_col=list(range(11)),
                         header=[0])
-
         indexDf = df.index.to_frame()
         indexDf['year_start'] = indexDf['year_start'] + self._year_start
         indexDf['year_end'] = indexDf['year_end'] + self._year_start
@@ -54,6 +52,13 @@ class Covid:
         popDf = self.pop
         popDf['age_start'] = popDf['age'] - 2
         popDf['age_end'] = popDf['age'] + 3
-        popDf = popDf.set_index(['age_start', 'age_end', 'sex'])
+        popDf = popDf.set_index(['sex', 'age_start', 'age_end'])
+
+        # Convert raw infections to a proportion of the population
         df = df.div(popDf['value'], axis=0).reorder_levels(df.index.names)
+
+        # Convert from infections per month to per year. Vivarium wants everything
+        # in per year and scales down for shorter timesteps.
+        df = df * 12
+
         self.RecursivelyOutputLevelFilter(df, suffix, 6, '')
