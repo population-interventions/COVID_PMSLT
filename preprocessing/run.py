@@ -5,21 +5,11 @@ import numpy as np
 from tqdm import tqdm
 import time
 import os
+import re
 
 fileCreated = {}
 
-############### Step 1 ###############
-
-def GetCohortData(cohortFile):
-    df = pd.read_csv(cohortFile + '.csv', 
-                index_col=[0],
-                header=[0])
-    df.index.rename('cohort', True)
-    df = df.reset_index()
-    df['cohort'] = df['cohort'].astype(int)
-    df['age'] = df['age'].astype(int)
-    return df
-
+############### Shared ###############
 
 def OutputToFile(df, path, fileAppend):
     # Called like this. Splits each random seed into its own file.
@@ -37,13 +27,20 @@ def OutputToFile(df, path, fileAppend):
         df.to_csv(fullFilePath, index=False) 
 
 
-def Output(name, path, df):
-    df = df.stack(level=[0,1])
+def LoadColumn(path, inName, indexCols):
+    return pd.read_csv(path + '_' + inName + '.csv',
+                header=[0],
+                index_col=list(range(indexCols)))
+
+
+def Output(path, df):
     index = df.index.to_frame(index=False)
     index = index.drop(columns=['run', 'global_transmissibility'])
     df.index = pd.MultiIndex.from_frame(index)
     df = df.rename('value')
     
+    # Consider the following as a nicer replacement:
+    #"for name, subDf in df.groupby(level=0):"
     for value in index.rand_seed.unique():
         rdf = df[df.index.isin([value], level=0)]
         rdf = rdf.reset_index()
@@ -51,7 +48,20 @@ def Output(name, path, df):
         OutputToFile(rdf, path, value)
 
 
-def ProcessChunk(df, chortDf):
+############### Step 1 ###############
+
+def GetCohortData(cohortFile):
+    df = pd.read_csv(cohortFile + '.csv', 
+                index_col=[0],
+                header=[0])
+    df.index.rename('cohort', True)
+    df = df.reset_index()
+    df['cohort'] = df['cohort'].astype(int)
+    df['age'] = df['age'].astype(int)
+    return df
+
+
+def ProcessChunk(df, chortDf, typeAppend):
     df.columns.set_levels(df.columns.levels[1].astype(int), level=1, inplace=True)
     df.columns.set_levels(df.columns.levels[2].astype(int), level=2, inplace=True)
     df.sort_values(['cohort', 'day'], axis=1, inplace=True)
@@ -89,12 +99,11 @@ def ProcessChunk(df, chortDf):
         df[107.5, j] = 0
     
     df = df.drop(columns=ageCols, level=0)
-    Output('mort', 'step1/mort', df)
-    Output('morb', 'step1/morb', df)
-    Output('cost', 'step1/cost', df)
+    df = df.stack(level=[0,1])
+    Output('step1/infect_' + typeAppend, df)
     
 
-def Process(filename, cohortFile):
+def ProcessCohorts(filename, cohortFile, typeAppend):
     cohortData = GetCohortData(cohortFile)
     chunksize = 4 ** 7
     
@@ -104,25 +113,19 @@ def Process(filename, cohortFile):
                              dtype={'day' : int, 'cohort' : int},
                              chunksize=chunksize),
                       total=4):
-        ProcessChunk(chunk, cohortData)
+        ProcessChunk(chunk, cohortData, typeAppend)
 
 
 ############### Step 2 ###############
-
-def LoadColumn(path, inName, output):
-    return pd.read_csv(path + '_' + inName + '.csv',
-                header=[0],
-                index_col=list(range(8)))
-   
 
 def CombineCsvColumns(path, output, nameList):
     df = None
     for n, value in tqdm(enumerate(nameList), total=len(nameList)):
         if n == 0:
-            df = LoadColumn(path, str(value), output)
+            df = LoadColumn(path, str(value), 8)
             df.rename(columns={'value' : 'draw_1'}, inplace=True)
         else:
-            df['draw_' + str(n + 1)] = LoadColumn(path, str(value), output)['value']
+            df['draw_' + str(n + 1)] = LoadColumn(path, str(value), 8)['value']
 
     df['draw_0'] = df.mean(axis=1)
     
@@ -140,11 +143,10 @@ def CombineCsvColumns(path, output, nameList):
 def CombineDraws(path):
     fileList = os.listdir(path)
     nameList = list(set(list(map(
-        lambda x: int(x[(x.find('_') + 1):x.find('.')]), fileList))))
+        lambda x: int(x[re.search(r'\d', x).start():x.find('.')]), fileList))))
     nameList.sort()
-    CombineCsvColumns('step1/mort', 'step2/acute_disease.covid.mortality', nameList)
-    CombineCsvColumns('step1/morb', 'step2/acute_disease.covid.morbidity', nameList)
-    CombineCsvColumns('step1/cost', 'step2/acute_disease.covid.expenditure', nameList)
+    CombineCsvColumns('step1/infect_vac', 'step2/comb_infect_vac', nameList)
+    CombineCsvColumns('step1/infect_noVac', 'step2/comb_infect_noVac', nameList)
   
 
 ############### Step 3 ###############      
@@ -153,7 +155,7 @@ def CombineDraws(path):
 def GetEffectsData(file):
     df = pd.read_csv(file + '.csv',
                 header=[0])
-    df = df.set_index(['age_start', 'sex'])
+    df = df.set_index(['vaccine', 'age_start', 'sex'])
     return df
 
 
@@ -161,7 +163,6 @@ def ProcessDrawTable(path, output, filename, multDf):
     df = pd.read_csv(path + '/' + filename + '.csv',
                 header=[0],
                 index_col=list(range(10)))
-    
     
     enddf = df[df.index.isin([11.5/12], level=7)]
     enddf = enddf*0
@@ -181,16 +182,104 @@ def ProcessDrawTable(path, output, filename, multDf):
         'param_vac2_tran_reduct', 'param_trigger_loosen', 'R0', 'sex',
         'age_start', 'age_end', 'year_start', 'year_end'])
     
-    df.to_csv(output + '/' + filename + '.csv')
+    #df.to_csv(output + '/' + filename + '.csv')
+    return df
     
 
 def ProcessEachDrawTable(path, output):
     cohortEffect = GetEffectsData('chort_effects')
-    ProcessDrawTable(path, output, 'acute_disease.covid.mortality', cohortEffect['mort'])
-    ProcessDrawTable(path, output, 'acute_disease.covid.morbidity', cohortEffect['morb'])
-    ProcessDrawTable(path, output, 'acute_disease.covid.expenditure', cohortEffect['cost'])
+    
+    df_mort_vac   = ProcessDrawTable(path, output, 'comb_infect_vac', 
+                                     cohortEffect.loc[1]['mort'])
+    df_mort_noVac = ProcessDrawTable(path, output, 'comb_infect_noVac',
+                                     cohortEffect.loc[0]['mort'])
+    df_morb_vac   = ProcessDrawTable(path, output, 'comb_infect_vac',
+                                     cohortEffect.loc[1]['morb'])
+    df_morb_noVac = ProcessDrawTable(path, output, 'comb_infect_noVac',
+                                     cohortEffect.loc[0]['morb'])
+    
+    (df_mort_vac + df_mort_noVac).to_csv(output + '/acute_disease.covid.mortality.csv')
+    (df_morb_vac + df_morb_noVac).to_csv(output + '/acute_disease.covid.morbidity.csv')
 
 
-#Process('abm_out/processed_infect_unique', 'abm_out/processed_static')
+############### Step 1 Stages ###############     
+
+def ProcessChunkStage(df):
+    df.columns.set_levels(df.columns.levels[1].astype(int), level=1, inplace=True)
+    df.columns.set_levels(df.columns.levels[2].astype(int), level=2, inplace=True)
+    
+    df.columns = df.columns.droplevel([0, 2])
+    
+    col_index = df.columns.to_frame()
+    col_index.reset_index(drop=True, inplace=True)
+    col_index['month'] = np.floor(col_index['day']*12/365).astype(int)
+    df.columns = pd.MultiIndex.from_frame(col_index)
+    
+    df = df.apply(lambda c: [1 if x > 2 else 0 for x in c])
+    df = df.groupby(level=[1], axis=1).mean()
+    
+    df = df.stack(level=[0])
+    Output('step1_stage/stage', df)
+
+
+def ProcessStages(filename):
+    chunksize = 4 ** 7
+    
+    for chunk in tqdm(pd.read_csv(filename + '.csv', 
+                             index_col=list(range(9)),
+                             header=list(range(3)),
+                             dtype={'day' : int, 'cohort' : int},
+                             chunksize=chunksize),
+                      total=4):
+        ProcessChunkStage(chunk)
+
+
+############### Step 2 Stages ###############
+
+def CombineCsvColumnsStage(path, output, nameList):
+    df = None
+    for n, value in tqdm(enumerate(nameList), total=len(nameList)):
+        if n == 0:
+            df = LoadColumn(path, str(value), 7)
+            df.rename(columns={'value' : 'draw_1'}, inplace=True)
+        else:
+            df['draw_' + str(n + 1)] = LoadColumn(path, str(value), 7)['value']
+
+    df['draw_0'] = df.mean(axis=1)
+    
+    index = df.index.to_frame()
+    index = index[['param_policy', 'param_vac_uptake', 'param_vac1_tran_reduct',
+                   'param_vac2_tran_reduct', 'param_trigger_loosen', 'R0', 'month']]
+    index['year_start'] = (index['month'] - 0.5)/12
+    index['year_end']   = (index['month'] + 0.5)/12
+    index = index.drop(columns=['month'])
+    df.index = pd.MultiIndex.from_frame(index)
+
+    enddf = df[df.index.isin([11.5/12], level=7)]
+    enddf = enddf*0
+    index = enddf.index.to_frame()
+    index['year_start'] = index['year_end']
+    index['year_end']   = 120
+    enddf.index = pd.MultiIndex.from_frame(index)
+    df = df.append(enddf)
+    
+    df.to_csv(output + '.csv')
+
+
+def CombineDrawsStage(path):
+    fileList = os.listdir(path)
+    nameList = list(set(list(map(
+        lambda x: int(x[re.search(r'\d', x).start():x.find('.')]), fileList))))
+    nameList.sort()
+    CombineCsvColumnsStage('step1_stage/stage', 'step2_stage/lockdown_stage', nameList)
+
+
+############### Run Infection Processing ###############
+
+#ProcessCohorts('abm_out/processed_infectVac', 'abm_out/processed_static', 'vac')
+#ProcessCohorts('abm_out/processed_infectNoVac', 'abm_out/processed_static', 'noVac')
 #CombineDraws('step1')
-ProcessEachDrawTable('step2', 'step3')
+#ProcessEachDrawTable('step2', 'step3')
+
+#ProcessStages('abm_out/processed_stage')
+CombineDrawsStage('step1_stage')

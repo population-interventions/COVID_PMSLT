@@ -11,11 +11,12 @@ from vivarium.framework.artifact import Artifact
 from mslt.artifacts.population import Population
 from mslt.artifacts.disease import Diseases
 from mslt.artifacts.disease_covid import Covid
+from mslt.artifacts.stages import Stages
 from mslt.artifacts.risk_factor import Tobacco
 from mslt.artifacts.uncertainty import Normal, Beta, LogNormal
 from mslt.artifacts.utilities import get_data_dir
 
-YEAR_START = 2011
+YEAR_START = 2021
 RANDOM_SEED = 49430
 WRITE_CSV = False
 
@@ -176,6 +177,12 @@ def assemble_artifacts(num_draws, output_path: Path, seed: int = RANDOM_SEED):
 
     logger.info('{} Writing population tables'.format(
         datetime.datetime.now().strftime("%H:%M:%S")))
+
+    # Add lockdowns
+    logger.info('{} Writing lockdown tables'.format(
+        datetime.datetime.now().strftime("%H:%M:%S")))
+    
+    Stages(art_nm, data_dir, YEAR_START, pop.year_end, write_table, num_draws)
 
     # Do some ad hoc stuff for covid
     logger.info('{} Writing covid tables'.format(

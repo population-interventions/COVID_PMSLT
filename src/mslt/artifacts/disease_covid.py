@@ -5,7 +5,6 @@ import pandas as pd
 import numpy as np
 import pathlib
 
-
 class Covid:
 
     def __init__(self, artifact, data_dir, year_start, year_end, pop, write_table, num_draws):
@@ -18,22 +17,21 @@ class Covid:
         self.write_table = write_table
         self.load_diseases_data('mortality')
         self.load_diseases_data('morbidity')
-        self.load_diseases_data('expenditure')
 
 
     def RecursivelyOutputLevelFilter(self, df, suffix, levelsRemaining, prefix):
         if levelsRemaining >= 1:
             levelsRemaining -= 1
             levelName = df.index.levels[0].name
-            for name in df.index.unique(level=0):
-                subDf = df[df.index.isin([name], level=0)]
+            for name, subDf in df.groupby(level=0):
+            #for name in df.index.unique(level=0):
+            #    subDf = df[df.index.isin([name], level=0)]
                 subDf.index = subDf.index.droplevel(level=0)
                 self.RecursivelyOutputLevelFilter(
                     subDf, suffix, levelsRemaining,
                     prefix + levelName + str(name).replace('.', '') + '_')
             return
         
-        df = df[df.columns[df.columns.isin(self.keep_cols)]]
         df = df.reset_index()
         self.write_table(self.artifact, 'acute_disease.covid_' + prefix + '.' + suffix, df)
 
@@ -61,4 +59,5 @@ class Covid:
         # in per year and scales down for shorter timesteps.
         df = df * 12
 
+        df = df[df.columns[df.columns.isin(self.keep_cols)]]
         self.RecursivelyOutputLevelFilter(df, suffix, 6, '')

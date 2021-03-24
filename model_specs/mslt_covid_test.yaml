@@ -6,10 +6,15 @@ components:
                 - Mortality()
                 - Disability()
             disease:
-            #    - AcuteDisease('covid_param_policyLooseSupress_param_vac_uptake90_param_vac1_tran_reduct50_param_vac2_tran_reduct90_param_trigger_loosenTrue_R0375_', 'True')
-                - AcuteDisease('LRTI', 'True')
-            #intervention:
-            #    - LockdownAcuteDisease('stages')
+                - AcuteDisease('covid_param_policyLooseSupress_param_vac_uptake90_param_vac1_tran_reduct50_param_vac2_tran_reduct90_param_trigger_loosenTrue_R0375_', 'True')
+                - AcuteDisease('anxiety', 'False')
+                - AcuteDisease('depressive', 'False')
+                - AcuteDisease('falls', 'False')
+                - AcuteDisease('ipv', 'False')
+                - AcuteDisease('roadinjury', 'False')
+                - AcuteDisease('selfharm', 'False')
+            stage:
+                - LockdownAcuteDisease('stage3and4')
             observer:
                 - MorbidityMortality()
 
@@ -27,9 +32,18 @@ configuration:
         population_size: 44
     time:
         start:
-            year: 2011
+            year: 2021
         end:
-            year: 2012
+            year: 2022
         step_size: 30.4166667  # In days
+    lockdown:
+        situation: 'covid_param_policyLooseSupress_param_vac_uptake90_param_vac1_tran_reduct50_param_vac2_tran_reduct90_param_trigger_loosenTrue_R0375_'
+        affects:
+            anxiety: 1.88
+            depressive: 1.16
+            falls: 0.76
+            ipv: 1.539
+            roadinjury: 0.65
+            selfharm: 1.48
     observer:
         output_prefix: results/mslt_covid_test4

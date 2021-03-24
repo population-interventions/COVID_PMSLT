@@ -34,7 +34,7 @@ class AcuteDisease:
 
     def __init__(self, name, noBau):
         self._name = name
-        self.noBau = noBau
+        self.noBau = (noBau == 'True')
         
     @property
     def name(self):
@@ -86,7 +86,6 @@ class AcuteDisease:
             delta = self.disability_rate(index)
         else:
             delta = self.int_disability_rate(index) - self.disability_rate(index)
-        print(delta[25])
         return yld_rate + delta
 
 
