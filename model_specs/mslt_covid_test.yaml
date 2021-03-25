@@ -6,7 +6,7 @@ components:
                 - Mortality()
                 - Disability()
             disease:
-                - AcuteDisease('covid_param_policyLooseSupress_param_vac_uptake90_param_vac1_tran_reduct50_param_vac2_tran_reduct90_param_trigger_loosenTrue_R0375_', 'True')
+                - AcuteDisease('covid_param_policyAggressElim_param_vac_uptake60_param_vac1_tran_reduct75_param_vac2_tran_reduct75_param_trigger_loosenFalse_R0375_', 'True')
                 - AcuteDisease('anxiety', 'False')
                 - AcuteDisease('depressive', 'False')
                 - AcuteDisease('falls', 'False')
@@ -16,6 +16,13 @@ components:
             stage:
                 - LockdownAcuteDisease('stage3and4')
             observer:
+                - AcuteDisease('covid_param_policyAggressElim_param_vac_uptake60_param_vac1_tran_reduct75_param_vac2_tran_reduct75_param_trigger_loosenFalse_R0375_')
+                - AcuteDisease('anxiety')
+                - AcuteDisease('depressive')
+                - AcuteDisease('falls')
+                - AcuteDisease('ipv')
+                - AcuteDisease('roadinjury')
+                - AcuteDisease('selfharm')
                 - MorbidityMortality()
 
 configuration:
@@ -33,11 +40,15 @@ configuration:
     time:
         start:
             year: 2021
+            month: 1
+            day: 15
         end:
             year: 2022
+            month: 1
+            day: 15
         step_size: 30.4166667  # In days
     lockdown:
-        situation: 'covid_param_policyLooseSupress_param_vac_uptake90_param_vac1_tran_reduct50_param_vac2_tran_reduct90_param_trigger_loosenTrue_R0375_'
+        situation: 'covid_param_policyAggressElim_param_vac_uptake60_param_vac1_tran_reduct75_param_vac2_tran_reduct75_param_trigger_loosenFalse_R0375_'
         affects:
             anxiety: 1.88
             depressive: 1.16
@@ -46,4 +57,4 @@ configuration:
             roadinjury: 0.65
             selfharm: 1.48
     observer:
-        output_prefix: results/mslt_covid_test4
+        output_prefix: results/covid_param_policyAggressElim_param_vac_uptake60_param_vac1_tran_reduct75_param_vac2_tran_reduct75_param_trigger_loosenFalse_R0375_/output

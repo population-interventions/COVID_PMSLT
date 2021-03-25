@@ -207,6 +207,7 @@ class Disability:
                                               key_columns=['sex'], 
                                               parameter_columns=['age','year'])
         self.yld_rate = builder.value.register_rate_producer('yld_rate', source=yld_rate)
+        self.bau_yld_rate = builder.value.register_rate_producer('bau_yld_rate', source=yld_rate)
 
         builder.event.register_listener('time_step', self.on_time_step)
 
@@ -224,7 +225,7 @@ class Disability:
         if pop.empty:
             return
         pop.yld_rate = self.yld_rate(event.index)
-        pop.bau_yld_rate = self.yld_rate.source(event.index)
+        pop.bau_yld_rate = self.bau_yld_rate(event.index)
         pop.HALY = pop.person_years * (1 - pop.yld_rate)
         pop.bau_HALY = pop.bau_person_years * (1 - pop.bau_yld_rate)
         self.population_view.update(pop)

@@ -18,7 +18,7 @@ from mslt.artifacts.utilities import get_data_dir
 
 YEAR_START = 2021
 RANDOM_SEED = 49430
-WRITE_CSV = False
+WRITE_CSV = True
 
 def output_csv_mkdir(data, path):
     """

@@ -65,15 +65,47 @@ class AcuteDisease:
         builder.value.register_value_modifier('mortality_rate', self.mortality_adjustment)
         builder.value.register_value_modifier('yld_rate', self.disability_adjustment)
 
+        columns = [
+            self.name + '_deaths_bau', self.name + '_HALY_bau', 
+            self.name + '_deaths', self.name + '_HALY'
+        ]
+        builder.population.initializes_simulants(
+            self.on_initialize_simulants,
+            creates_columns=columns,
+            requires_columns=['age', 'sex'])
+        self.population_view = builder.population.get_view([
+            self.name + '_deaths_bau', self.name + '_HALY_bau', 
+            self.name + '_deaths', self.name + '_HALY', 
+            'population', 'person_years', 'bau_population', 'bau_person_years'])
+
+    def on_initialize_simulants(self, pop_data):
+        pop = pd.DataFrame({
+                f'{self.name}_deaths_bau': 0.0,
+                f'{self.name}_HALY_bau': 0.0,
+                f'{self.name}_deaths': 0.0,
+                f'{self.name}_HALY': 0.0,
+            },
+            index=pop_data.index)
+
+        self.population_view.update(pop)
+
+
     def mortality_adjustment(self, index, mortality_rate):
         """
         Adjust the all-cause mortality rate in the intervention scenario, to
         account for any change in prevalence (relative to the BAU scenario).
         """
+        pop = self.population_view.get(index)
+        # The 12 converts from per-year to per-month
         if self.noBau:
             delta = self.excess_mortality(index)
+            pop[self.name + '_deaths'] = pop.population * self.excess_mortality(index) / 12 
         else:
             delta = self.int_excess_mortality(index) - self.excess_mortality(index)
+            pop[self.name + '_deaths'] = pop.population * self.int_excess_mortality(index) / 12 
+            pop[self.name + '_deaths_bau'] = pop.bau_population * self.excess_mortality(index) / 12 
+        
+        self.population_view.update(pop)
         return mortality_rate + delta
 
     def disability_adjustment(self, index, yld_rate):
@@ -82,10 +114,16 @@ class AcuteDisease:
         scenario, to account for any change in prevalence (relative to the BAU
         scenario).
         """
+        pop = self.population_view.get(index)
         if self.noBau:
             delta = self.disability_rate(index)
+            pop[self.name + '_HALY'] = pop.person_years * self.disability_rate(index) / 12 
         else:
             delta = self.int_disability_rate(index) - self.disability_rate(index)
+            pop[self.name + '_HALY_bau'] = pop.bau_person_years * self.int_disability_rate(index) / 12 
+            pop[self.name + '_HALY'] = pop.person_years * self.disability_rate(index) / 12 
+        
+        self.population_view.update(pop)
         return yld_rate + delta
 
 

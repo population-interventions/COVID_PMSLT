@@ -130,8 +130,8 @@ def CombineCsvColumns(path, output, nameList):
     df['draw_0'] = df.mean(axis=1)
     
     index = df.index.to_frame()
-    index['year_start'] = (index['month'] - 0.5)/12
-    index['year_end']   = (index['month'] + 0.5)/12
+    index['year_start'] = (index['month'])/12
+    index['year_end']   = (index['month'] + 1)/12
     index['age_start']  = index['age'] - 2.5
     index['age_end']    = index['age'] + 2.5
     index = index.drop(columns=['age', 'month'])
@@ -250,8 +250,8 @@ def CombineCsvColumnsStage(path, output, nameList):
     index = df.index.to_frame()
     index = index[['param_policy', 'param_vac_uptake', 'param_vac1_tran_reduct',
                    'param_vac2_tran_reduct', 'param_trigger_loosen', 'R0', 'month']]
-    index['year_start'] = (index['month'] - 0.5)/12
-    index['year_end']   = (index['month'] + 0.5)/12
+    index['year_start'] = (index['month'])/12
+    index['year_end']   = (index['month'] + 1)/12
     index = index.drop(columns=['month'])
     df.index = pd.MultiIndex.from_frame(index)
 
@@ -278,8 +278,8 @@ def CombineDrawsStage(path):
 
 #ProcessCohorts('abm_out/processed_infectVac', 'abm_out/processed_static', 'vac')
 #ProcessCohorts('abm_out/processed_infectNoVac', 'abm_out/processed_static', 'noVac')
-#CombineDraws('step1')
-#ProcessEachDrawTable('step2', 'step3')
+CombineDraws('step1')
+ProcessEachDrawTable('step2', 'step3')
 
 #ProcessStages('abm_out/processed_stage')
 CombineDrawsStage('step1_stage')
