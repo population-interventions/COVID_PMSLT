@@ -11,7 +11,7 @@ from vivarium.framework.artifact import Artifact
 from mslt.artifacts.population import Population
 from mslt.artifacts.disease import Diseases
 from mslt.artifacts.disease_covid import Covid
-from mslt.artifacts.stages import Stages
+from mslt.artifacts.stage import Stages
 from mslt.artifacts.risk_factor import Tobacco
 from mslt.artifacts.uncertainty import Normal, Beta, LogNormal
 from mslt.artifacts.utilities import get_data_dir
