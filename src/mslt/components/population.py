@@ -148,6 +148,7 @@ class Mortality:
         pop.bau_pr_death = bau_probability_of_death
         pop.deaths = deaths
         pop.bau_deaths = bau_deaths
+        # TODO: DELETE self.years_per_timestep because it double counts time rate.
         pop.person_years = (pop.population + 0.5 * pop.deaths) * self.years_per_timestep
         pop.bau_person_years = (pop.bau_population + 0.5 * pop.bau_deaths) * self.years_per_timestep
         self.population_view.update(pop)

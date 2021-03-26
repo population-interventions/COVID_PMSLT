@@ -17,7 +17,7 @@ specTemplate = """components:
                 - AcuteDisease('anxiety', 'False')
                 - AcuteDisease('depressive', 'False')
                 - AcuteDisease('falls', 'False')
-                - AcuteDisease('ipv', 'False')
+                #- AcuteDisease('ipv', 'False')
                 - AcuteDisease('roadinjury', 'False')
                 - AcuteDisease('selfharm', 'False')
             stage:
@@ -27,7 +27,7 @@ specTemplate = """components:
                 - AcuteDisease('anxiety')
                 - AcuteDisease('depressive')
                 - AcuteDisease('falls')
-                - AcuteDisease('ipv')
+                #- AcuteDisease('ipv')
                 - AcuteDisease('roadinjury')
                 - AcuteDisease('selfharm')
                 - MorbidityMortality()
@@ -60,11 +60,11 @@ configuration:
             anxiety: 1.88
             depressive: 1.16
             falls: 0.76
-            ipv: 1.539
+            #ipv: 1.539
             roadinjury: 0.65
             selfharm: 1.48
     observer:
-        output_prefix: results/covid_{1}/output"""
+        output_prefix: results/covid2_{1}/output"""
 
 runFileNumber = 0
 batchFile = open("batchFile.txt", "w")
