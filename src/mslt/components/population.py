@@ -148,7 +148,6 @@ class Mortality:
         pop.bau_pr_death = bau_probability_of_death
         pop.deaths = deaths
         pop.bau_deaths = bau_deaths
-        # TODO: DELETE self.years_per_timestep because it double counts time rate.
         pop.person_years = (pop.population + 0.5 * pop.deaths) * self.years_per_timestep
         pop.bau_person_years = (pop.bau_population + 0.5 * pop.bau_deaths) * self.years_per_timestep
         self.population_view.update(pop)
@@ -210,6 +209,7 @@ class Disability:
         self.yld_rate = builder.value.register_rate_producer('yld_rate', source=yld_rate)
         self.bau_yld_rate = builder.value.register_rate_producer('bau_yld_rate', source=yld_rate)
 
+        self.years_per_timestep = builder.configuration.time.step_size/365
         builder.event.register_listener('time_step', self.on_time_step)
 
         self.population_view = builder.population.get_view([
@@ -227,8 +227,9 @@ class Disability:
             return
         pop.yld_rate = self.yld_rate(event.index)
         pop.bau_yld_rate = self.bau_yld_rate(event.index)
-        pop.HALY = pop.person_years * (1 - pop.yld_rate)
-        pop.bau_HALY = pop.bau_person_years * (1 - pop.bau_yld_rate)
+        # Rescale yld_rate to per year, person_years is already person years per timestep.
+        pop.HALY = pop.person_years * (1 - pop.yld_rate / self.years_per_timestep)
+        pop.bau_HALY = pop.bau_person_years * (1 - pop.bau_yld_rate / self.years_per_timestep)
         self.population_view.update(pop)
 
 

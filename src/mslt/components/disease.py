@@ -65,6 +65,7 @@ class AcuteDisease:
         builder.value.register_value_modifier('mortality_rate', self.mortality_adjustment)
         builder.value.register_value_modifier('yld_rate', self.disability_adjustment)
 
+        self.years_per_timestep = builder.configuration.time.step_size/365
         columns = [
             self.name + '_deaths_bau', self.name + '_HALY_bau', 
             self.name + '_deaths', self.name + '_HALY'
@@ -96,14 +97,14 @@ class AcuteDisease:
         account for any change in prevalence (relative to the BAU scenario).
         """
         pop = self.population_view.get(index)
-        # The 12 converts from per-year to per-month
+        # self.years_per_timestep converts from per-year to per-month
         if self.noBau:
             delta = self.int_excess_mortality(index)
-            pop[self.name + '_deaths'] = pop.population * self.int_excess_mortality(index) / 12 
+            pop[self.name + '_deaths'] = pop.population * self.int_excess_mortality(index) * self.years_per_timestep
         else:
             delta = self.int_excess_mortality(index) - self.excess_mortality(index)
-            pop[self.name + '_deaths'] = pop.population * self.int_excess_mortality(index) / 12 
-            pop[self.name + '_deaths_bau'] = pop.bau_population * self.excess_mortality(index) / 12 
+            pop[self.name + '_deaths'] = pop.population * self.int_excess_mortality(index) * self.years_per_timestep
+            pop[self.name + '_deaths_bau'] = pop.bau_population * self.excess_mortality(index) * self.years_per_timestep
         
         self.population_view.update(pop)
         return mortality_rate + delta
@@ -115,13 +116,14 @@ class AcuteDisease:
         scenario).
         """
         pop = self.population_view.get(index)
+        # person_years is already for this month, so no multiplier is required.
         if self.noBau:
             delta = self.int_disability_rate(index)
-            pop[self.name + '_HALY'] = -pop.person_years * self.int_disability_rate(index) / 12 
+            pop[self.name + '_HALY'] = -pop.person_years * self.int_disability_rate(index)
         else:
             delta = self.int_disability_rate(index) - self.disability_rate(index)
-            pop[self.name + '_HALY'] = -pop.person_years * self.int_disability_rate(index) / 12 
-            pop[self.name + '_HALY_bau'] = -pop.bau_person_years * self.disability_rate(index) / 12 
+            pop[self.name + '_HALY'] = -pop.person_years * self.int_disability_rate(index)
+            pop[self.name + '_HALY_bau'] = -pop.bau_person_years * self.disability_rate(index)
         
         self.population_view.update(pop)
         return yld_rate + delta

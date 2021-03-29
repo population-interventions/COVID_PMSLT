@@ -10,14 +10,24 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
+dataPrefix = 'covid4/data'
+
 diseaseFiles = [
      'output_anxiety',  
      'output_covid_param',
      'output_depressive',
-     'output_falls',
+     #'output_falls',
      'output_roadinjury', 
      'output_selfharm',
 ]
+
+forceNonPositive = {
+     'output_anxiety' : True,  
+     'output_covid_param' : True,
+     'output_depressive' : True,
+     'output_selfharm' : True,
+     'output_roadinjury' : False,
+}
 
 runList = []
 for a, policy in enumerate(['AggressElim', 'ModerateElim', 'TightSupress', 'LooseSupress']):
@@ -31,7 +41,7 @@ for a, policy in enumerate(['AggressElim', 'ModerateElim', 'TightSupress', 'Loos
                         index = '{0}{1}{2}{3}{4}{5}'.format(a, b, c, d, e, f)
                         
                         runList.append({
-                            'path' : 'covid2_{0}/'.format(index),
+                            'path' : '{0}_{1}/'.format(dataPrefix, index),
                             'params' : {
                                 'param_policy'           : policy,
                                 'param_vac1_tran_reduct' : tran1,
@@ -81,14 +91,8 @@ def ProcessRun(run, lifeExpect):
     df_main['age'] = np.floor(df_main['age']) # Turn ages into age-cohort.
     df_main = df_main.set_index(['sex', 'age', 'month'])
     
-    # Fix HALY factor here because I'm not rerunning the model.
-    # person_years is person years per timstep, 
-    # TODO: Remove for fixed model.
-    df_main['bau_HALY'] = df_main['bau_person_years'] * (1 - df_main['bau_yld_rate'] * 12)
-    df_main['HALY'] = df_main['person_years'] * (1 - df_main['yld_rate'] * 12)
-    
     df_dis = pd.DataFrame()
-    death_change = pd.DataFrame()
+    df_mort = pd.DataFrame()
     for fileName in diseaseFiles:
         df = pd.read_csv(run.get('path') + fileName + '.csv',
                     header=[0])
@@ -100,28 +104,28 @@ def ProcessRun(run, lifeExpect):
         df['month_2'] = df['month']
         df = df.set_index(['sex', 'age', 'month'])
         
-        # Fix HALY factor here because I'm not rerunning the model.
-        # TODO: Remove for fixed model.
-        df['bau_HALY'] = df['bau_HALY'] * 12
-        df['HALY'] = df['HALY'] * 12
-        
         # Find the difference between intervention and BAU
         df['H_diff'] = df['HALY'] - df['bau_HALY']
         df['D_diff'] = df['death'] - df['bau_death']
+        #print('fileNamefileNamefileName', fileName)
+        #print(df['HALY'])
+        #print(df['bau_HALY'])
         df = df.drop(columns=['bau_death', 'bau_HALY', 'death', 'HALY'])
         
-        # Note that bau_yld_rate is actually per month at model output, so the code below
-        # makes sense.
-        df['D_effect'] = df['D_diff'] * (12.5 - df['month_2']) * (1 - df_main['bau_yld_rate'])
+        # Add death effects over the year.
+        # Note that bau_yld_rate is actually rate per timestep, so per month
+        df['D_effect'] = df['D_diff'] * (12.5 - df['month_2'])/12 * (1 - 12 * df_main['bau_yld_rate'])
         df = df.drop(columns=['month_2'])
-        
         df['H_diff'] = df['H_diff'] - df['D_effect']
-        df = df.groupby(level=[0, 1]).sum()
         
-        df_dis[fileName] = df['H_diff']
-        death_change[fileName] = df['D_diff'] * lifeExpect['HALY/Pop_0']
+        df = df.groupby(level=[0, 1]).sum()
+        # Zero Haly gain of numbers like 1.09E-05
+        if forceNonPositive[fileName]:
+            df['H_diff'] = df['H_diff'].combine(0, min)
+        
+        df_dis['morbidity', fileName[7:]] = df['H_diff']
+        df_mort['mortality', fileName[7:]] = -df['D_diff'] * lifeExpect['HALY/Pop_0']
     
-    #print(run['params'])
     # Sum HALYs for each cohort.
     halySum = df_dis.sum(axis=1)
     mainHalySum = (df_main['HALY'] - df_main['bau_HALY']).groupby(level=[0, 1]).sum()
@@ -129,18 +133,13 @@ def ProcessRun(run, lifeExpect):
     #print(mainHalySum)
     #print(death_change['output_covid_param'])
     
-    # Recale HALY diff so they match main lifetable diff.
-    # Then apply HALY loss beyond first year.
-    #df_dis = df_dis.mul(np.abs(mainHalySum / halySum), axis=0)
+    # Recale HALY diff so it matches main lifetable diff.
+    df_dis = df_dis.mul(np.abs(mainHalySum / halySum).fillna(1), axis=0)
+    #print((mainHalySum / halySum).fillna(1))
     
-    df_dis = df_dis - death_change
-    mainHalySum = mainHalySum - df_dis.output_falls
-    df_dis['total'] = mainHalySum
+    #df_dis['morbidity', 'total'] = mainHalySum
+    df_dis = df_dis.merge(df_mort, left_index=True, right_index=True)
     df_dis = df_dis.sum()
-    
-    # Remove Falls.
-    df_dis = df_dis.drop('output_falls')
-    #print(df_dis)
     
     df_dis = df_dis.append(pd.Series(run['params']))
     return df_dis
@@ -151,14 +150,15 @@ def DoProcess(runListIn):
     lifeExpect = LoadLifeExpect()
     count = 0
     for run in tqdm(runListIn, total=648):
-        #if count > 170:
-        haly = ProcessRun(run, lifeExpect)
-        df = df.append(haly, ignore_index=True)
-        count = count + 1
-        #if count > 175:
+        #if count > 623:
+        df = df.append(ProcessRun(run, lifeExpect), ignore_index=True)
+        #count = count + 1
+        #if count > 642:
         #    break
     
-    df = df.set_index(['param_policy', 'param_vac1_tran_reduct', 'param_vac2_tran_reduct', 'param_vac_uptake', 'param_trigger_loosen', 'R0'])
-    df.to_csv('haly_output2.csv')
+    df = df.set_index(['param_policy', 'param_vac1_tran_reduct', 'param_vac2_tran_reduct',
+                       'param_vac_uptake', 'param_trigger_loosen', 'R0'])
+    df.columns = pd.MultiIndex.from_tuples(df.columns)
+    df.to_csv('haly_output.csv')
     
 DoProcess(runList)

@@ -16,7 +16,7 @@ specTemplate = """components:
                 - AcuteDisease('{0}', 'True')
                 - AcuteDisease('anxiety', 'False')
                 - AcuteDisease('depressive', 'False')
-                - AcuteDisease('falls', 'False')
+                #- AcuteDisease('falls', 'False')
                 #- AcuteDisease('ipv', 'False')
                 - AcuteDisease('roadinjury', 'False')
                 - AcuteDisease('selfharm', 'False')
@@ -26,7 +26,7 @@ specTemplate = """components:
                 - AcuteDisease('{0}')
                 - AcuteDisease('anxiety')
                 - AcuteDisease('depressive')
-                - AcuteDisease('falls')
+                #- AcuteDisease('falls')
                 #- AcuteDisease('ipv')
                 - AcuteDisease('roadinjury')
                 - AcuteDisease('selfharm')
@@ -57,14 +57,22 @@ configuration:
     lockdown:
         situation: '{0}'
         affects:
-            anxiety: 1.88
-            depressive: 1.16
-            falls: 0.76
-            #ipv: 1.539
-            roadinjury: 0.65
-            selfharm: 1.48
+            morbidity:
+                anxiety: 1.88
+                depressive: 1.16
+                #falls: 0.76
+                #ipv: 1.539
+                roadinjury: 0.65
+                selfharm: 1.48
+            mortality:
+                anxiety: 1.88
+                depressive: 1.16
+                #falls: 0.76
+                #ipv: 1.539
+                roadinjury: 0.65
+                selfharm: 1
     observer:
-        output_prefix: results/covid2_{1}/output"""
+        output_prefix: results/covid4/data_{1}/output"""
 
 runFileNumber = 0
 batchFile = open("batchFile.txt", "w")
@@ -85,4 +93,5 @@ for a, policy in enumerate(['AggressElim', 'ModerateElim', 'TightSupress', 'Loos
                         f.close()
                         runFileNumber = runFileNumber + 1
                         print(index, runFileNumber)
+    batchFile.write('\n')
 batchFile.close()
