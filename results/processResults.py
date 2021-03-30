@@ -114,9 +114,9 @@ def ProcessRun(run, lifeExpect):
         
         # Add death effects over the year.
         # Note that bau_yld_rate is actually rate per timestep, so per month
-        df['D_effect'] = df['D_diff'] * (12.5 - df['month_2'])/12 * (1 - 12 * df_main['bau_yld_rate'])
+        #df['D_effect'] = df['D_diff'] * (12.5 - df['month_2'])/12 * (1 - 12 * df_main['bau_yld_rate'])
         df = df.drop(columns=['month_2'])
-        df['H_diff'] = df['H_diff'] - df['D_effect']
+        #df['H_diff'] = df['H_diff'] - df['D_effect']
         
         df = df.groupby(level=[0, 1]).sum()
         # Zero Haly gain of numbers like 1.09E-05
@@ -135,7 +135,7 @@ def ProcessRun(run, lifeExpect):
     
     # Recale HALY diff so it matches main lifetable diff.
     df_dis = df_dis.mul(np.abs(mainHalySum / halySum).fillna(1), axis=0)
-    #print((mainHalySum / halySum).fillna(1))
+    print((mainHalySum / halySum).fillna(1))
     
     #df_dis['morbidity', 'total'] = mainHalySum
     df_dis = df_dis.merge(df_mort, left_index=True, right_index=True)
@@ -159,6 +159,6 @@ def DoProcess(runListIn):
     df = df.set_index(['param_policy', 'param_vac1_tran_reduct', 'param_vac2_tran_reduct',
                        'param_vac_uptake', 'param_trigger_loosen', 'R0'])
     df.columns = pd.MultiIndex.from_tuples(df.columns)
-    df.to_csv('haly_output.csv')
+    df.to_csv('haly_output_bad.csv')
     
 DoProcess(runList)

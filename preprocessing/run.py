@@ -252,6 +252,7 @@ def CombineCsvColumnsStage(path, output, nameList):
                    'param_vac2_tran_reduct', 'param_trigger_loosen', 'R0', 'month']]
     index['year_start'] = (index['month'])/12
     index['year_end']   = (index['month'] + 1)/12
+    index['R0'] = index['R0'].replace({0.43 : 3.125,})
     index = index.drop(columns=['month'])
     df.index = pd.MultiIndex.from_frame(index)
 
@@ -264,6 +265,25 @@ def CombineCsvColumnsStage(path, output, nameList):
     df = df.append(enddf)
     
     df.to_csv(output + '.csv')
+    
+    df = df[['draw_0']]
+    df = df.groupby(level=[0, 1, 2, 3, 4, 5], axis=0).mean()
+    
+    df = df.rename(columns={'draw_0' : 'value'})
+    df = df.reset_index()
+    df = df[df['param_vac1_tran_reduct'] == df['param_vac2_tran_reduct']]
+    df = df.drop(columns=['param_vac2_tran_reduct'])
+    df = df.rename(columns={'param_vac1_tran_reduct' : 'param_vac_tran_reduct'})
+    
+    df['param_vac_uptake'] = df['param_vac_uptake'].replace({
+        60 : '60',
+        75 : '075',
+        90 : '0090',
+    })
+    
+    df = df.set_index(['param_policy', 'param_vac_tran_reduct', 'R0', 'param_trigger_loosen', 'param_vac_uptake'])
+    df = df.unstack(['param_policy', 'param_vac_tran_reduct'])
+    df.to_csv(output + '_average.csv')
 
 
 def CombineDrawsStage(path):
@@ -278,8 +298,8 @@ def CombineDrawsStage(path):
 
 #ProcessCohorts('abm_out/processed_infectVac', 'abm_out/processed_static', 'vac')
 #ProcessCohorts('abm_out/processed_infectNoVac', 'abm_out/processed_static', 'noVac')
-CombineDraws('step1')
-ProcessEachDrawTable('step2', 'step3')
+#CombineDraws('step1')
+#ProcessEachDrawTable('step2', 'step3')
 
 #ProcessStages('abm_out/processed_stage')
 CombineDrawsStage('step1_stage')

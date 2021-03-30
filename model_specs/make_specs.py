@@ -72,7 +72,7 @@ configuration:
                 roadinjury: 0.65
                 selfharm: 1
     observer:
-        output_prefix: results/covid4/data_{1}/output"""
+        output_prefix: results/covid5/data_{1}/output"""
 
 runFileNumber = 0
 batchFile = open("batchFile.txt", "w")
