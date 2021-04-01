@@ -11,16 +11,18 @@ import pandas as pd
 import os
 
 
+def MakePath(path):
+    out_folder = os.path.dirname(path)
+    if not os.path.exists(out_folder):
+        MakePath(out_folder)
+        os.mkdir(out_folder)
+
 def output_csv_mkdir(data, path, index):
     """
     Wrapper for pandas .to_csv() method to create directory for path if it
     doesn't already exist.
     """
-    out_folder = os.path.dirname(path)
-
-    if not os.path.exists(out_folder):
-        os.mkdir(out_folder)
-
+    MakePath(path)
     data.to_csv(path, index=index)
 
 

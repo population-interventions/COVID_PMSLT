@@ -13,17 +13,17 @@ specTemplate = """components:
                 - Mortality()
                 - Disability()
             disease:
-                - AcuteDisease('{0}', 'True')
-                - AcuteDisease('anxiety', 'False')
-                - AcuteDisease('depressive', 'False')
-                #- AcuteDisease('falls', 'False')
-                #- AcuteDisease('ipv', 'False')
-                - AcuteDisease('roadinjury', 'False')
-                - AcuteDisease('selfharm', 'False')
+                - AcuteDisease('covid')
+                - AcuteDisease('anxiety')
+                - AcuteDisease('depressive')
+                #- AcuteDisease('falls')
+                #- AcuteDisease('ipv')
+                - AcuteDisease('roadinjury')
+                - AcuteDisease('selfharm')
             stage:
                 - LockdownAcuteDisease('stage3and4')
             observer:
-                - AcuteDisease('{0}')
+                - AcuteDisease('covid')
                 - AcuteDisease('anxiety')
                 - AcuteDisease('depressive')
                 #- AcuteDisease('falls')
@@ -54,8 +54,11 @@ configuration:
             month: 1
             day: 15
         step_size: 30.4166667  # In days
+    acute_disease:
+        covid:
+            data_name: '{0}'
+            no_bau: true
     lockdown:
-        situation: '{0}'
         affects:
             morbidity:
                 anxiety: 1.88

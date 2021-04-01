@@ -29,7 +29,7 @@ class LockdownAcuteDisease:
             d : diseaseDis[d] for _,d in enumerate(diseaseDis)
         }
 
-        situation = self.config['lockdown'].situation
+        situation = self.config['acute_disease'].covid.data_name
         stage_data = builder.data.load('stage.' + situation + '.stage3and4')
         self.stage_table = builder.lookup.build_table(stage_data, 
                                                parameter_columns=['year'])

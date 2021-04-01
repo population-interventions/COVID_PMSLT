@@ -32,21 +32,31 @@ class AcuteDisease:
 
     """
 
-    def __init__(self, name, noBau):
+    def __init__(self, name):
         self._name = name
-        self.noBau = (noBau == 'True')
         
     @property
     def name(self):
         return self._name
 
     def setup(self, builder):
+        self.data_name = self.name
+        self.no_bau = False
+        
+        """Configuration."""
+        if 'acute_disease' in builder.configuration and self.name in builder.configuration.acute_disease:
+            configuration = builder.configuration.acute_disease[self.name]
+            if configuration.data_name:
+                self.data_name = configuration.data_name
+            if configuration.no_bau:
+                self.no_bau = configuration.no_bau
+                
         """Load the morbidity and mortality data."""
-        mty_data = builder.data.load(f'acute_disease.{self.name}.mortality')
+        mty_data = builder.data.load(f'acute_disease.{self.data_name}.mortality')
         mty_rate = builder.lookup.build_table(mty_data, 
                                               key_columns=['sex'], 
                                               parameter_columns=['age','year'])
-        yld_data = builder.data.load(f'acute_disease.{self.name}.morbidity')
+        yld_data = builder.data.load(f'acute_disease.{self.data_name}.morbidity')
         yld_rate = builder.lookup.build_table(yld_data,
                                               key_columns=['sex'], 
                                               parameter_columns=['age','year'])
@@ -98,7 +108,7 @@ class AcuteDisease:
         """
         pop = self.population_view.get(index)
         # self.years_per_timestep converts from per-year to per-month
-        if self.noBau:
+        if self.no_bau:
             delta = self.int_excess_mortality(index)
             pop[self.name + '_deaths'] = pop.population * self.int_excess_mortality(index) * self.years_per_timestep
         else:
@@ -117,7 +127,7 @@ class AcuteDisease:
         """
         pop = self.population_view.get(index)
         # person_years is already for this month, so no multiplier is required.
-        if self.noBau:
+        if self.no_bau:
             delta = self.int_disability_rate(index)
             pop[self.name + '_HALY'] = -pop.person_years * self.int_disability_rate(index)
         else:
