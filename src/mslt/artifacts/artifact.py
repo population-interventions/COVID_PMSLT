@@ -10,15 +10,15 @@ from vivarium.framework.artifact import Artifact
 
 from mslt.artifacts.population import Population
 from mslt.artifacts.disease import Diseases
-from mslt.artifacts.disease_covid import Covid
 from mslt.artifacts.stage import Stages
+from mslt.artifacts.disease_covid import Covid
 from mslt.artifacts.risk_factor import Tobacco
 from mslt.artifacts.uncertainty import Normal, Beta, LogNormal
 from mslt.artifacts.utilities import get_data_dir
 
 YEAR_START = 2021
 RANDOM_SEED = 49430
-WRITE_CSV = False
+WRITE_CSV = True
 
 def output_csv_mkdir(data, path):
     """
@@ -154,41 +154,23 @@ def assemble_artifacts(num_draws, output_path: Path, seed: int = RANDOM_SEED):
         # Also draw samples for the RR associated with tobacco smoking.
         smp_tob_dis_tbl[name] = prng.random_sample(num_draws)
 
-    # Now write all of the required tables for:
-    #
-    #   - Both the Maori and non-Maori populations; and
-    #   - Both the 20-year and 0-year recovery from smoking.
-    #
-    # So there are 4 data artifacts to write.
-
-    nm_artifact_fmt = 'mslt_tobacco_non-maori.hdf'
-    nm_artifact_file = output_path / nm_artifact_fmt
+    # Now write all of the required tables
+    artifact_fmt = 'pmslt_artifact.hdf'
+    artifact_file = output_path / artifact_fmt
 
     logger.info('{} Generating artifacts'.format(
         datetime.datetime.now().strftime("%H:%M:%S")))
 
     # Initialise each artifact file.
-    for path in [nm_artifact_file]:
+    for path in [artifact_file]:
         if path.exists():
             path.unlink()
 
     # Write the data tables to each artifact file.
-    art_nm = Artifact(str(nm_artifact_file))
+    art_nm = Artifact(str(artifact_file))
 
     logger.info('{} Writing population tables'.format(
         datetime.datetime.now().strftime("%H:%M:%S")))
-
-    # Add lockdowns
-    logger.info('{} Writing lockdown tables'.format(
-        datetime.datetime.now().strftime("%H:%M:%S")))
-    
-    Stages(art_nm, data_dir, YEAR_START, pop.year_end, write_table, num_draws)
-
-    # Do some ad hoc stuff for covid
-    logger.info('{} Writing covid tables'.format(
-        datetime.datetime.now().strftime("%H:%M:%S")))
-    
-    Covid(art_nm, data_dir, YEAR_START, pop.year_end, pop.get_population(), write_table, num_draws)
 
     # Write the main population tables.
     write_table(art_nm, 'population.structure',
@@ -235,4 +217,16 @@ def assemble_artifacts(num_draws, output_path: Path, seed: int = RANDOM_SEED):
                      disease_nm.sample_disability_from(
                          dist_acute_yld, smp_acute_yld[name]))
 
-    print(nm_artifact_file)
+    # Add lockdowns
+    logger.info('{} Writing lockdown tables'.format(
+        datetime.datetime.now().strftime("%H:%M:%S")))
+    
+    Stages(art_nm, data_dir, YEAR_START, pop.year_end, write_table, num_draws)
+
+    # Do some ad hoc stuff for covid
+    logger.info('{} Writing covid tables'.format(
+        datetime.datetime.now().strftime("%H:%M:%S")))
+    
+    Covid(art_nm, data_dir, YEAR_START, pop.year_end, pop.get_population(), write_table, num_draws)
+
+    print(artifact_file)

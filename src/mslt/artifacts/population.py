@@ -5,6 +5,7 @@ import numpy as np
 import pathlib
 
 from .uncertainty import sample_fixed_rate_from
+from .utilities import UnstackDraw
 
 
 class Population:
@@ -66,6 +67,9 @@ class Population:
                                     df, 'rate',
                                     rate_dist, samples)                          
         df = df.rename(columns = {'rate': 'value'})
+
+        df = UnstackDraw(df)
+
         return df
 
     def get_disability_rate(self):

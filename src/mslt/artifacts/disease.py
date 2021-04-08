@@ -6,6 +6,7 @@ import numpy as np
 import pathlib
 
 from .uncertainty import sample_column_long, sample_fixed_rate_from
+from .utilities import UnstackDraw
 
 
 def sample_disease_rate_from(year_start, year_end, data, rate_name, apc_data,
@@ -82,9 +83,7 @@ def sample_disease_rate_from(year_start, year_end, data, rate_name, apc_data,
               'age_end',
               df['age_start'] + 1)
 
-    df = df.sort_values(['year_start', 'age_start', 'sex', 'draw'])
-    df = df.reset_index(drop=True)
-
+    df = UnstackDraw(df)
     return df
 
 
@@ -229,6 +228,7 @@ class Chronic:
                   'age_end',
                   df['age_start'] + 1)
         df = df.rename(columns={'prev': 'value'})
+        df = UnstackDraw(df)
         return df
 
 
@@ -266,8 +266,7 @@ class Acute:
         df.insert(0, 'year_start', self._year_start)
         df.insert(1, 'year_end', self._year_end + 1)
 
-        df = df.sort_values(['year_start', 'age_start', 'sex'])
-        df = df.reset_index(drop=True)
+        df = UnstackDraw(df)
 
         return df
 
@@ -276,6 +275,7 @@ class Acute:
         col = 'excess_mortality'
         df = sample_fixed_rate_from(self._year_start, self._year_end,
                                     self._data, col, rate_dist, samples)
+        df = UnstackDraw(df)
         df = df.rename(columns={'excess_mortality': 'value'})
         return df
 
@@ -284,6 +284,7 @@ class Acute:
         col = 'disability_rate'
         df = sample_fixed_rate_from(self._year_start, self._year_end,
                                     self._data, col, rate_dist, samples)
+        df = UnstackDraw(df)
         df = df.rename(columns={'disability_rate': 'value'})
         return df
 

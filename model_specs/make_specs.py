@@ -34,7 +34,7 @@ specTemplate = """components:
 
 configuration:
     input_data:
-        artifact_path: C:\\Dev\\Repos\\COVID_PMSLT\\artifacts\\mslt_tobacco_non-maori.hdf
+        artifact_path: C:\\Dev\\Repos\\COVID_PMSLT\\artifacts\\pmslt_artifact.hdf
         input_draw_number: 0
         location: ''
     interpolation:
@@ -85,7 +85,7 @@ for a, policy in enumerate(['AggressElim', 'ModerateElim', 'TightSupress', 'Loos
         for c, tran1 in enumerate(['50', '75', '90']):
             for d, tran2 in enumerate(['50', '75', '90']):
                 for e, loose in enumerate(['False', 'True']):
-                    for f, rep in enumerate(['25', '043', '375']):
+                    for f, rep in enumerate(['25', '3125', '375']):
                         run = 'covid_param_policy{0}_param_vac_uptake{1}_param_vac1_tran_reduct{2}_param_vac2_tran_reduct{3}_param_trigger_loosen{4}_R0{5}_'.format(
                             policy, uptake, tran1, tran2, loose, rep)
                         index = '{0}{1}{2}{3}{4}{5}'.format(a, b, c, d, e, f)

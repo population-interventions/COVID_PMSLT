@@ -32,6 +32,10 @@ class Covid:
                     prefix + levelName + str(name).replace('.', '') + '_')
             return
         
+        #df = df.stack().to_frame()
+        #df = df.reset_index()
+        #df = df.rename(columns={'level_5' : 'draw', 0 : 'value'})
+        #df['draw'] = df['draw'].str.replace('draw_', '').astype(int)
         df = df.reset_index()
         self.write_table(self.artifact, 'acute_disease.covid_' + prefix + '.' + suffix, df)
 

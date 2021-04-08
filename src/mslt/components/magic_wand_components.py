@@ -45,10 +45,17 @@ class IncidenceShift:
         return self._name
 
     def setup(self, builder):
-        builder.value.register_value_modifier(f'{self.name}_intervention.incidence', self.incidence_adjustment)
+        builder.value.register_value_modifier(f'{self.name}.incidence', self.incidence_adjustment)
+
+        self.rate_mult = 0.5
+        """Configuration."""
+        if 'magic_wand' in builder.configuration and self.name in builder.configuration.magic_wand:
+            configuration = builder.configuration.magic_wand[self.name]
+            if configuration.rate_reduce:
+                self.rate_mult = (1 - configuration.rate_reduce)
 
     def incidence_adjustment(self, index, rates):
-        return rates * .5
+        return rates * self.rate_mult
 
 
 class ModifyAcuteDiseaseYLD:
