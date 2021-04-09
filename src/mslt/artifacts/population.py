@@ -8,40 +8,42 @@ from .uncertainty import sample_fixed_rate_from
 from .utilities import UnstackDraw
 
 
+def ProcessDataTable(df, year_start, max_age):
+    # Retain only the necessary columns.
+    df['year'] = year_start
+    #convert age to float for non-year timesteps
+    df['age'] = df['age'].astype(float)
+    # Remove strata that have already reached the terminal age.
+    df = df[~ (df.age == max_age)]
+    # Sort the rows.
+    df = df.sort_values(by=['year', 'age', 'sex']).reset_index(drop=True)
+    return df
+
+
 class Population:
 
     def __init__(self, data_dir, year_start):
-        data_file = '{}/base_population.csv'.format(data_dir)
-        data_path = str(pathlib.Path(data_file).resolve())
+        df_pop = pd.read_csv(str(pathlib.Path('{}/base_population.csv'.format(data_dir)).resolve()))
 
-        df = pd.read_csv(data_path)
-        df = df.rename(columns={'mortality per 1 rate': 'mortality_rate',
+
+        df_life = pd.read_csv(str(pathlib.Path('{}/base_lifetable.csv'.format(data_dir)).resolve()))
+        df_life = df_life.rename(columns={'mortality per 1 rate': 'mortality_rate',
                                 'pYLD rate': 'disability_rate',
-                                'APC in all-cause mortality': 'mortality_apc',
-                                '5-year': 'population'})
-
-        # Use identical populations in the BAU and intervention scenarios.
-        df['bau_population'] = df['population'].values
-
+                                'APC in all-cause mortality': 'mortality_apc'})
+        
         # Retain only the necessary columns.
-        df['year'] = year_start
-        df = df[['year', 'age', 'sex', 'population', 'bau_population',
-                 'disability_rate', 'mortality_rate', 'mortality_apc']]
+        df_life = df_life[['age', 'sex', 'disability_rate', 'mortality_rate', 'mortality_apc']]
 
-        # Remove strata that have already reached the terminal age.
-        df = df[~ (df.age == df['age'].max())]
-
-        #convert age to float for non-year timesteps
-        df['age'] = df['age'].astype(float)
-
-        # Sort the rows.
-        df = df.sort_values(by=['year', 'age', 'sex']).reset_index(drop=True)
+        # Add years and sort rows.
+        df_pop = ProcessDataTable(df_pop, year_start, df_life['age'].max())
+        df_life = ProcessDataTable(df_life, year_start, df_life['age'].max())
 
         self.year_start = year_start
-        self.year_end = year_start + df['age'].max() - df['age'].min()
+        self.year_end = year_start + df_pop['age'].max() - df_pop['age'].min()
         self._num_apc_years = 15
 
-        self._data = df
+        self._df_pop = df_pop
+        self._df_life = df_life
 
     def years(self):
         """Return an iterator over the simulation period."""
@@ -49,10 +51,8 @@ class Population:
 
     def get_population(self):
         """Return the initial population size for each stratum."""
-        cols = ['year', 'age', 'sex', 'population']
         # Retain only those strata for whom the population size is defined.
-        df = self._data.loc[self._data['population'].notna(), cols].copy()
-        df = df.rename(columns = {'population': 'value'})
+        df = self._df_pop.rename(columns = {'population': 'value'})
         return df
 
     def sample_disability_rate_from(self, rate_dist, samples):
@@ -62,7 +62,7 @@ class Population:
         :param rate_dist: The sampling distribution.
         :param samples: Random samples from the half-open interval [0, 1).
         """
-        df = self._data.rename(columns={'disability_rate': 'rate'})
+        df = self._df_life.rename(columns={'disability_rate': 'rate'})
         df = sample_fixed_rate_from(self.year_start, self.year_end,
                                     df, 'rate',
                                     rate_dist, samples)                          
@@ -74,7 +74,7 @@ class Population:
 
     def get_disability_rate(self):
         """Return the disability rate for each stratum."""
-        df = self._data[['age', 'sex', 'disability_rate']]
+        df = self._df_life[['age', 'sex', 'disability_rate']]
         df = df.rename(columns={'disability_rate': 'value'})
 
         #convert age to float for non-year timesteps
@@ -98,7 +98,7 @@ class Population:
 
     def get_acmr_apc(self):
         """Return the annual percent change (APC) in mortality rate."""
-        df = self._data[['year', 'age', 'sex', 'mortality_apc']]
+        df = self._df_life[['year', 'age', 'sex', 'mortality_apc']]
         df = df.rename(columns={'mortality_apc': 'value'})
 
         tables = []
@@ -124,7 +124,7 @@ class Population:
         # - Each cohort has a separate APC (column FE)
         # - ACMR = BASE_ACMR * e^(APC * (year - 2011))
         df_apc = self.get_acmr_apc()
-        df_acmr = self._data[['age', 'sex', 'mortality_rate']]
+        df_acmr = self._df_life[['age', 'sex', 'mortality_rate']]
         df_acmr = df_acmr.rename(columns={'mortality_rate': 'value'})
         base_acmr = df_acmr['value'].copy()
 
